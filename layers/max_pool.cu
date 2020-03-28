@@ -77,7 +77,7 @@ public:
 
     cudnnHandle_t cudnnHandle;
 
-    MaxPoolLayer(int size, int stride, int batch_size, int conv_out_channel, int conv_out_height, int conv_out_width, int _gpu_id, cudnnHandle_t _cudnnHandle){
+    MaxPoolLayer(int size, int stride, int padding, int batch_size, int conv_out_channel, int conv_out_height, int conv_out_width, int _gpu_id, cudnnHandle_t _cudnnHandle){
 
         // Assign Handles
         cudnnHandle=_cudnnHandle;
@@ -104,7 +104,7 @@ public:
                                                CUDNN_POOLING_MAX,
                                                CUDNN_PROPAGATE_NAN,
                                                size, size,
-                                               0, 0,
+                                               padding, padding,
                                                stride, stride));
         // Output Tensor
         checkCUDNN(cudnnCreateTensorDescriptor(&poolTensor));
@@ -153,16 +153,16 @@ public:
 };
 
 void test_mpl(){
-	// Take 5x5 image, use 3x3 stride
-	int WIDTH = 5, HEIGHT = 5, BATCH_SIZE = 1, CHANNELS = 1, SIZE=2, STRIDE=1;
+  // Take 5x5 image, use 3x3 stride
+  int WIDTH = 4, HEIGHT = 4, BATCH_SIZE = 1, CHANNELS = 1, SIZE=2, STRIDE=2, PADDING=0;
     float *data, *output;
     cudnnHandle_t cudnn;
     cudnnCreate(&cudnn);
 
-    MaxPoolLayer mpl(SIZE, STRIDE, BATCH_SIZE, CHANNELS, HEIGHT, WIDTH, 0, cudnn);
+    MaxPoolLayer mpl(SIZE, STRIDE, PADDING, BATCH_SIZE, CHANNELS, HEIGHT, WIDTH, 0, cudnn);
     
     float* input_matrix = (float *)malloc(sizeof(float)*HEIGHT*WIDTH);
-    float* output_matrix = (float *)malloc(sizeof(float)*HEIGHT*WIDTH);
+    float* output_matrix = (float *)malloc(sizeof(float)*(HEIGHT/STRIDE)*(WIDTH/STRIDE));
     for(int i=0; i<HEIGHT*WIDTH; i++) input_matrix[i]=i;
     cudaMalloc(&data, sizeof(float) * WIDTH*HEIGHT);
     cudaMalloc(&output, sizeof(float) * WIDTH*HEIGHT);
@@ -170,23 +170,23 @@ void test_mpl(){
     
     std::cout << "Input Matrix:\n";
     for(int i=0; i<HEIGHT*WIDTH; i++){
-		if(i%WIDTH==0) std::cout << "\n";
-		std::cout << input_matrix[i] << "  ";
-	}
-	
-	std::cout << "\n\nPerforming max pool Size=" << SIZE << "x" << SIZE << " Stride=(" <<  STRIDE << ", " << STRIDE << ")\n";
-	mpl.forward(data, output);
-	
-	checkCudaErrors(cudaMemcpy(output_matrix, output, sizeof(float)*HEIGHT*WIDTH, cudaMemcpyDeviceToHost));
-	std::cout << "\nOutput Matrix:\n";
-	for(int i=0; i<HEIGHT*WIDTH; i++){
-		if(i%WIDTH==0) std::cout << "\n";
-		std::cout << output_matrix[i] << " ";
-	}
-	std::cout << "\n";
+    if(i%WIDTH==0) std::cout << "\n";
+    std::cout << input_matrix[i] << "  ";
+  }
+  
+  std::cout << "\n\nPerforming max pool Size=" << SIZE << "x" << SIZE << " Stride=(" <<  STRIDE << ", " << STRIDE << ")\n";
+  mpl.forward(data, output);
+  
+  checkCudaErrors(cudaMemcpy(output_matrix, output, sizeof(float)*(HEIGHT/STRIDE)*(WIDTH/STRIDE), cudaMemcpyDeviceToHost));
+  std::cout << "\nOutput Matrix:\n";
+  for(int i=0; i<(HEIGHT/STRIDE)*(WIDTH/STRIDE); i++){
+    if(i%(WIDTH/STRIDE)==0) std::cout << "\n";
+    std::cout << output_matrix[i] << " ";
+  }
+  std::cout << "\n";
 }
 
 int main() {
-	test_mpl();
-	return 0;
+  test_mpl();
+  return 0;
 }
