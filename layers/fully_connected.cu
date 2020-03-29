@@ -134,9 +134,13 @@ public:
         // Initialize the weights and bias;
         init_test_weights();
 
-        // Copy the weights and bias in the GPU
+        // Allocate memory for weights and bias in the GPU
         checkCudaErrors(cudaMalloc(&weights, sizeof(float) * cpu_weights.size()));
         checkCudaErrors(cudaMalloc(&bias, sizeof(float) * cpu_bias.size()));
+
+        // Copy the values of weights and bias from CPU to GPU
+        checkCudaErrors(cudaMemcpyAsync(d_pfc1, &cpu_weights[0], sizeof(float) * cpu_weights.size(), cudaMemcpyHostToDevice));
+        checkCudaErrors(cudaMemcpyAsync(d_pfc1bias, &cpu_bias[0], sizeof(float) * cpu_bias.size(),    cudaMemcpyHostToDevice));
 
     }
 
