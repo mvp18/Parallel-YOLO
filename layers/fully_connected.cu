@@ -82,49 +82,42 @@ public:
     const float beta = 0.0f;
 
     /* Tensor Descriptors for our operation */
-    cudnnTensorDescriptor_t input_descriptor;
-    cudnnTensorDescriptor_t output_descriptor;
-    cudnnTensorDescriptor_t bias_descriptor;
-    cudnnFilterDescriptor_t kernel_descriptor; // descriptor for the weight parameter
-    cudnnConvolutionDescriptor_t convolution_descriptor; // descriptor for the operation
-    cudnnConvolutionFwdAlgo_t convolution_algorithm; // descriptor for the algorithm to use
-    cudnnHandle_t cudnn;
+    cudnnTensorDescriptor_t input_tensor;
+    cudnnTensorDescriptor_t output_tensor;
+
     cublasHandle_t cublas;
 
-    size_t workspace = 0, tmpsize = 0;
-    void* d_workspace{nullptr};
-    size_t m_workspaceSize;
-
-    cudnnConvolutionBwdFilterAlgo_t convbwfalgo; // used for computing gradient with respect to weight
-    cudnnConvolutionBwdDataAlgo_t convbwdalgo; // used for computing gradient with respect to input
-    bool falgo, dalgo; // if falgo, we compute gradient with respect to filter weight parameter, if dalgo, we compute gradient with respect to input
-
     /*** These variables are on GPU ***/
-    // weights of the kernel and bias
-    float *param_kernel;
-    float *param_bias;
-
-    // placeholders for gradients of parameters
-    float *grad_kernel;
-    float *grad_bias;
-    float *grad_data; // gradient with respect input of convolution, Note : INPUT
+    // weights and bias
+    float *weights;
+    float *bias;
 
     /*** These variables are on CPU ***/
-    std::vector<float> cpu_param_kernel;
-    std::vector<float> cpu_param_bias;
+    std::vector<float> cpu_weights;
+    std::vector<float> cpu_bias;
 
-    /*** Definition variables we would be using ***/
-    int input_size;
-    int output_size;
-    int out_height;
-    int out_width;
     int gpu_id;
-    int in_channels, kernel_size, out_channels;
 
-    FullyConnectedLayer(int _in_channels, cudnnHandle_t _cudnn, cublasHandle_t _cublas,
-         int batch_size, int width, int height, bool use_backward_filter, bool use_backward_data, int gpu_id,
-         cudnnTensorDescriptor_t& _input_descriptor, cudnnTensorDescriptor_t& _output_descriptor, bool init_io_desc) {
+    FullyConnectedLayer(int input_size, int output_size, int batch_size, cublasHandle_t _cublas, int gpu_id,
+         cudnnTensorDescriptor_t& _input_descriptor, cudnnTensorDescriptor_t& _output_descriptor) {
         
+        // Create tensor for input (output from the pooling layer)
+        checkCUDNN(cudnnCreateTensorDescriptor(&input_tensor));
+        
+        // Create tensor for output
+        checkCUDNN(cudnnCreateTensorDescriptor(&output_tensor));
+
+        // Set tensor description
+        checkCUDNN(cudnnSetTensor4dDescriptor(input_tensor,
+            CUDNN_TENSOR_NCHW,
+            CUDNN_DATA_FLOAT,
+            batch_size, input_size, 1, 1));
+
+        checkCUDNN(cudnnSetTensor4dDescriptor(output_tensor,
+            CUDNN_TENSOR_NCHW,
+            CUDNN_DATA_FLOAT,
+            batch_size, output_size, 1, 1));
+
     }
 
     void init_test_weights() {
@@ -133,13 +126,39 @@ public:
     void init_weights() {
     }
 
-    void forward(float *d_input, float *d_output) {
+    void forward(float *input_data, float *output_data, float, float *onevec) {
+
+        // Forward propagation using weights
+        checkCudaErrors(cublasSgemm(cublasHandle, CUBLAS_OP_T, CUBLAS_OP_N,
+            output_size, batch_size, input_size,
+            &alpha,
+            weights, input_size,
+            input_data, input_size,
+            &beta,
+            output_data, output_size));
+
+        // Adding bias to output_data
+        checkCudaErrors(cublasSgemm(cublasHandle, CUBLAS_OP_N, CUBLAS_OP_N,
+            output_size, batch_size, 1,
+            &alpha,
+            bias, output_size,
+            onevec, 1,
+            &alpha,
+            output_data, output_size));
+
     }
 
-    void backward(float *data_grad_above, cudnnTensorDescriptor_t tensor_below, float *data_below) {
+    void backward(float *data_grad_above, float *data_below, float* onevec) {
     }
 
     void updateWeights(float learning_rate) {
+`       
+        checkCudaErrors(cublasSaxpy(cublasHandle, static_cast<int>(ref_fc1.pneurons.size()),
+        &alpha, gfc1, 1, pfc1, 1));
+
+        checkCudaErrors(cublasSaxpy(cublasHandle, static_cast<int>(ref_fc1.pbias.size()),
+        &alpha, gfc1bias, 1, pfc1bias, 1));
+    
     }
 
 };
