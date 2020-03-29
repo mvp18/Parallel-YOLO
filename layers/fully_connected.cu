@@ -85,6 +85,9 @@ public:
     cudnnTensorDescriptor_t input_tensor;
     cudnnTensorDescriptor_t output_tensor;
 
+    int input_size;
+    int output_size;
+
     cublasHandle_t cublasHandle;
 
     /*** These variables are on GPU ***/
@@ -103,12 +106,15 @@ public:
 
     int gpu_id;
 
-    FullyConnectedLayer(int input_size, int output_size, int batch_size, cublasHandle_t _cublas, int _gpu_id) {
+    FullyConnectedLayer(int inp_size, int out_size, int batch_size, cublasHandle_t _cublas, int _gpu_id) {
 
         cublasHandle = _cublas
         gpu_id = _gpu_id
 
         checkCudaErrors(cudaSetDevice(gpu_id));
+
+        input_size = inp_size;
+        output_size = out_size;
         
         // Create tensor for input (output from the pooling layer)
         checkCUDNN(cudnnCreateTensorDescriptor(&input_tensor));
