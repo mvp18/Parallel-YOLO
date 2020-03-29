@@ -3,7 +3,6 @@
 Task Left
 =========
 
-- Write Fully Connected Layer
 - Write SoftMax layer
 - Write Preprocessing pipeline
 - Build a small model and train on Mnist (for testing purposes)
