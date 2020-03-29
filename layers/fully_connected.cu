@@ -96,6 +96,11 @@ public:
     std::vector<float> cpu_weights;
     std::vector<float> cpu_bias;
 
+    /** Variables to store grad with respect to weights and bias **/
+    float *grad_weights;
+    float *grad_bias;
+    float *grad_data;
+
     int gpu_id;
 
     FullyConnectedLayer(int input_size, int output_size, int batch_size, cublasHandle_t _cublas, int gpu_id,
@@ -149,15 +154,28 @@ public:
     }
 
     void backward(float *data_grad_above, float *data_below, float* onevec) {
+
+        // Compute derivative with respect to weights: grad_weights = (data_below * data_grad_above')
+        checkCudaErrors(cublasSgemm(cublasHandle, CUBLAS_OP_N, CUBLAS_OP_T, input_size, output_size, batch_size,
+            &alpha, data_below, input_size, data_grad_above, output_size, &beta, grad_weights, input_size));
+        
+        // Compute derivative with respect to bias: grad_bias = data_grad_above * 1_vec
+        checkCudaErrors(cublasSgemv(cublasHandle, CUBLAS_OP_N, output_size, batch_size,
+            &alpha, data_grad_above, output_size, onevec, 1, &beta, grad_bias, 1));
+        
+        // Compute derivative with respect to data (for previous layer): data_below * data_grad_above
+        checkCudaErrors(cublasSgemm(cublasHandle, CUBLAS_OP_N, CUBLAS_OP_N, input_size, batch_size, output_size,
+            &alpha, weights, input_size, data_grad_above, output_size, &beta, grad_data, input_size));
+
     }
 
     void updateWeights(float learning_rate) {
 `       
-        checkCudaErrors(cublasSaxpy(cublasHandle, static_cast<int>(ref_fc1.pneurons.size()),
-        &alpha, gfc1, 1, pfc1, 1));
+        checkCudaErrors(cublasSaxpy(cublasHandle, static_cast<int>(cpu_weights.size()),
+        &alpha, grad_weights, 1, weights, 1));
 
-        checkCudaErrors(cublasSaxpy(cublasHandle, static_cast<int>(ref_fc1.pbias.size()),
-        &alpha, gfc1bias, 1, pfc1bias, 1));
+        checkCudaErrors(cublasSaxpy(cublasHandle, static_cast<int>(cpu_bias.size()),
+        &alpha, grad_bias, 1, bias, 1));
     
     }
 
