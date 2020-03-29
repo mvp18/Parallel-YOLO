@@ -403,18 +403,18 @@ public:
     }
 
     void backward(float *data_grad_from_above_conv, float *data_grad_below, cudnnTensorDescriptor_t output_tensor_of_below_conv, float *data_grad_above_from_below_conv, float* data_grad_below_from_below_conv, float* data_below, float* input_tensor, float* output_tensor){
-        checkCUDNN(cudnnPoolingBackward(cudnnHandle,        //handle
-                                        poolDesc,           //poolingDesc
-                                        &alpha,             //alpha
-                                        poolTensor,         //yDesc
-                                        output_tensor,               //y
-                                        poolTensor,         //dyDesc
-                                        data_grad_from_above_conv,    //dy 
-                                        output_tensor_of_below_conv,       //xDesc
-                                        input_tensor,         //x     (NOT SURE ABOUT THIS)
-                                        &beta,                             //beta
-                                        output_tensor_of_below_conv,         //dxDesc
-                                        data_grad_below_from_below_conv));                              //dx
+        checkCUDNN(cudnnPoolingBackward(cudnnHandle,        				//handle
+                                        poolDesc,			            	//poolingDesc
+                                        &alpha,             				//alpha
+                                        poolTensor,         				//yDesc
+                                        output_tensor,               		//y
+                                        poolTensor,         				//dyDesc
+                                        data_grad_from_above_conv,    		//dy 
+                                        output_tensor_of_below_conv,    	//xDesc
+                                        input_tensor,         				//x
+                                        &beta,                          	//beta
+                                        output_tensor_of_below_conv,    	//dxDesc
+                                        data_grad_below_from_below_conv));  //dx
     }
 
     void update_weights(){
@@ -422,78 +422,3 @@ public:
         return;
     }
 };
-
-// void test_cnn_forward() {
-//  int WIDTH = 4, HEIGHT = 5, BATCH_SIZE = 1, CHANNELS = 1;
-//  int GPU_ID = 0;
-//  checkCudaErrors(cudaSetDevice(GPU_ID));
-//     float *data, *output;
-//     cudnnHandle_t cudnn;
-//     cublasHandle_t cublas;
-
-//     cudnnTensorDescriptor_t d1, d2; // dummy descriptors
-//     cudnnCreate(&cudnn);
-//     cublasCreate(&cublas);
-//     Conv c(1, CHANNELS, 2, 1, 1, cudnn, cublas,
-//          BATCH_SIZE, WIDTH, HEIGHT, true, false, GPU_ID, d1, d2, true);
-//     cudaMalloc(&data, sizeof(float) * c.input_size);
-//     cudaMalloc(&output, sizeof(float) * c.output_size);
-
-//     float *cpu_data = (float *)malloc(sizeof(float) * c.input_size);
-//     for(int i = 0;i < c.input_size;i++) cpu_data[i] = 1.0;
-//     checkCudaErrors(cudaMemcpyAsync(data, cpu_data, sizeof(float) * c.input_size,  cudaMemcpyHostToDevice));
-  
-//     c.forward(data, output);
-
-//     // Move from device to host
-//     float *out = (float *)malloc(sizeof(float) * c.output_size);
-//     // float out[BATCH_SIZE][c.out_height][c.out_width][c.out_channels];
-//     checkCudaErrors(cudaMemcpy(out, output, sizeof(float) * c.output_size, cudaMemcpyDeviceToHost));
-
-//     // for(int i = 0;i < c.out_height;i++) {
-//     //   for(int j = 0;j < c.out_width;j++)
-//     //     std::cout << out[0][i][j][0] << " ";
-//     //   std::cout << std::endl;
-//     // }
-//     // std::cout << std::endl;
-//     for(int i = 0;i < c.output_size;i++) {
-//      std::cout << out[i] << " ";
-//     }
-//     std::cout << std::endl;
-//     std::cout << c.output_size << std::endl;
-// }
-
-
-// void test_mpl_forward(){
-//   // Take 5x5 image, use 3x3 stride
-//   int WIDTH = 4, HEIGHT = 4, BATCH_SIZE = 1, CHANNELS = 1, SIZE=2, STRIDE=2, PADDING=0;
-//     float *data, *output;
-//     cudnnHandle_t cudnn;
-//     cudnnCreate(&cudnn);
-
-//     MaxPoolLayer mpl(SIZE, STRIDE, PADDING, BATCH_SIZE, CHANNELS, HEIGHT, WIDTH, 0, cudnn);
-    
-//     float* input_matrix = (float *)malloc(sizeof(float)*HEIGHT*WIDTH);
-//     float* output_matrix = (float *)malloc(sizeof(float)*(HEIGHT/STRIDE)*(WIDTH/STRIDE));
-//     for(int i=0; i<HEIGHT*WIDTH; i++) input_matrix[i]=i;
-//     cudaMalloc(&data, sizeof(float) * WIDTH*HEIGHT);
-//     cudaMalloc(&output, sizeof(float) * WIDTH*HEIGHT);
-//     checkCudaErrors(cudaMemcpyAsync(data, input_matrix, sizeof(float)*HEIGHT*WIDTH, cudaMemcpyHostToDevice));
-    
-//     std::cout << "Input Matrix:\n";
-//     for(int i=0; i<HEIGHT*WIDTH; i++){
-//     if(i%WIDTH==0) std::cout << "\n";
-//     std::cout << input_matrix[i] << "  ";
-//   }
-  
-//   std::cout << "\n\nPerforming max pool Size=" << SIZE << "x" << SIZE << " Stride=(" <<  STRIDE << ", " << STRIDE << ")\n";
-//   mpl.forward(data, output);
-  
-//   checkCudaErrors(cudaMemcpy(output_matrix, output, sizeof(float)*(HEIGHT/STRIDE)*(WIDTH/STRIDE), cudaMemcpyDeviceToHost));
-//   std::cout << "\nOutput Matrix:\n";
-//   for(int i=0; i<(HEIGHT/STRIDE)*(WIDTH/STRIDE); i++){
-//     if(i%(WIDTH/STRIDE)==0) std::cout << "\n";
-//     std::cout << output_matrix[i] << " ";
-//   }
-//   std::cout << "\n";
-// }
