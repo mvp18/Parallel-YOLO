@@ -85,7 +85,7 @@ public:
     cudnnTensorDescriptor_t input_tensor;
     cudnnTensorDescriptor_t output_tensor;
 
-    cublasHandle_t cublas;
+    cublasHandle_t cublasHandle;
 
     /*** These variables are on GPU ***/
     // weights and bias
@@ -103,8 +103,12 @@ public:
 
     int gpu_id;
 
-    FullyConnectedLayer(int input_size, int output_size, int batch_size, cublasHandle_t _cublas, int gpu_id,
-         cudnnTensorDescriptor_t& _input_descriptor, cudnnTensorDescriptor_t& _output_descriptor) {
+    FullyConnectedLayer(int input_size, int output_size, int batch_size, cublasHandle_t _cublas, int _gpu_id) {
+
+        cublasHandle = _cublas
+        gpu_id = _gpu_id
+
+        checkCudaErrors(cudaSetDevice(gpu_id));
         
         // Create tensor for input (output from the pooling layer)
         checkCUDNN(cudnnCreateTensorDescriptor(&input_tensor));
@@ -123,12 +127,38 @@ public:
             CUDNN_DATA_FLOAT,
             batch_size, output_size, 1, 1));
 
+        /* Create memory for weights and bias in the CPU */
+        cpu_weights = std::vector<float>(input_size * output_size, 0);
+        cpu_bias = std::vector<float>(output_size, 0);
+
+        // Initialize the weights and bias;
+        init_test_weights();
+
+        // Copy the weights and bias in the GPU
+        checkCudaErrors(cudaMalloc(&weights, sizeof(float) * cpu_weights.size()));
+        checkCudaErrors(cudaMalloc(&bias, sizeof(float) * cpu_bias.size()));
+
     }
 
     void init_test_weights() {
     }
 
     void init_weights() {
+        
+        // Create random seed
+        std::random_device rd;
+        std::mt19937 gen(FLAGS_random_seed < 0 ? rd() : static_cast<unsigned int>(FLAGS_random_seed));
+    
+        // Xavier Initialization
+        float wfc1 = sqrt(3.0f / (static_cast<float>(cpu_weights.size())));
+        std::uniform_real_distribution<> dfc1(-wfc1, wfc1);
+        
+        // Fill the arrays with random values   
+        for (auto&& iter : cpu_weights)
+            iter = static_cast<float>(dfc1(gen))
+        for (auto&& iter : cpu_bias)
+            iter = static_cast<float>(dfc1(gen));
+
     }
 
     void forward(float *input_data, float *output_data, float, float *onevec) {
