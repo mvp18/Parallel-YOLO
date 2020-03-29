@@ -87,6 +87,7 @@ public:
 
     int input_size;
     int output_size;
+    int batch_size
 
     cublasHandle_t cublasHandle;
 
@@ -106,7 +107,7 @@ public:
 
     int gpu_id;
 
-    FullyConnectedLayer(int inp_size, int out_size, int batch_size, cublasHandle_t _cublas, int _gpu_id) {
+    FullyConnectedLayer(int inp_size, int out_size, int batchSize, cublasHandle_t _cublas, int _gpu_id) {
 
         cublasHandle = _cublas
         gpu_id = _gpu_id
@@ -115,6 +116,7 @@ public:
 
         input_size = inp_size;
         output_size = out_size;
+        batch_size = batchSsize;
         
         // Create tensor for input (output from the pooling layer)
         checkCUDNN(cudnnCreateTensorDescriptor(&input_tensor));
