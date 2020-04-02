@@ -80,6 +80,8 @@ int main() {
     std::cout << "\n---------------JUST RUNNING MAX POOL---------------\n";
     test_forward_mpl();
     std::cout << "\n---------------RUNNING CONV THEN MAX POOL---------------\n";
+    test_relu():
+    std::cout << "\n---------------TESTING RELU FORWARD AND BACKWARD---------------\n";
 
     // Initialize image and cudnn handles
     int WIDTH_CONV = 4, HEIGHT_CONV = 5, KERNEL_SIZE_CONV=2, PADDING_CONV=1, STRIDE_CONV=1;  //Input to Conv
@@ -208,3 +210,91 @@ void pprint(float* matrix, int size, int width){
     }
     std::cout << std::endl;
 }
+
+void test_relu() 
+{
+    int WIDTH = 5, HEIGHT = 5, BATCH_SIZE = 1, CHANNELS = 1;
+    int GPU_ID = 0;
+    checkCudaErrors(cudaSetDevice(GPU_ID));
+ 
+    float *data, *output, *dup, *dout;
+    cudnnHandle_t cudnn;
+    //cublasHandle_t cublas;
+
+    //cudnnTensorDescriptor_t d1, d2; // dummy descriptors
+    cudnnCreate(&cudnn);
+    //cublasCreate(&cublas);
+ 
+    Relu R(CHANNELS, CHANNELS, cudnn, /*cublas,*/ BATCH_SIZE, HEIGHT, WIDTH, GPU_ID);
+ 
+    cudaMalloc((void **)&data, sizeof(float) * R.input_size);
+    cudaMalloc((void **)&output, sizeof(float) * R.output_size);
+    cudaMalloc((void **)&dout, sizeof(float) * R.output_size);
+    cudaMalloc((void **)&dup, sizeof(float) * R.output_size);
+
+    float *cpu_data = (float *)malloc(sizeof(float) * R.input_size);
+    for(int i = 0; i < R.input_size; i++)
+        cpu_data[i] = -12.0 + i;
+    cpu_data[1] = 3234.0; //to check clipping
+    cpu_data[20] = 3566.0;
+ 
+    cout<<"Testing Forward . . ."<<endl;
+ 
+    cout << "Input Matrix:"<<endl;
+    for(int i=0; i<R.input_size; i++)
+    {
+        if(i%WIDTH==0)
+            cout << "\n";
+        cout << cpu_data[i] << " ";
+    }
+    cout << "\nApply ReLU:"<<endl;
+ 
+    checkCudaErrors(cudaMemcpy(data, cpu_data, sizeof(float) * R.input_size,  cudaMemcpyHostToDevice));
+    cout << "\nApply ReLU 2:"<<endl;
+    R.forward(data, output);
+ 
+    float *out = (float *)malloc(sizeof(float) * R.output_size);
+    checkCudaErrors(cudaMemcpy(out, output, sizeof(float) * R.output_size, cudaMemcpyDeviceToHost));
+    cout << "Output Matrix:"<<endl;
+    for(int i=0; i<R.output_size; i++)
+    {
+        if(i%WIDTH==0)
+            cout << "\n";
+        cout << out[i] << " ";
+    }
+    cout<<endl;
+ 
+ 
+    cout<<"Testing Backward . . ."<<endl;
+ 
+    float *cpu_dup = (float *)malloc(sizeof(float) * R.output_size);
+    for(int i=0; i<R.output_size; i++)
+        cpu_dup[i] = 100 + i;
+ 
+    cout << "Upstream Derivatives:";
+    for(int i=0; i<R.output_size; i++)
+    {
+        if(i%WIDTH==0)
+            cout << "\n";
+        cout << cpu_dup[i] << " ";
+    }
+    cout<<endl;
+ 
+    checkCudaErrors(cudaMemcpy(dup, cpu_dup, sizeof(float) * R.output_size,  cudaMemcpyHostToDevice));
+
+    cout << "\nApply Backward:"<<endl;
+    R.backward(dup, dout);
+ 
+    float *cpu_dout = (float *)malloc(sizeof(float) * R.input_size);
+    checkCudaErrors(cudaMemcpy(cpu_dout, dout, sizeof(float) * R.input_size, cudaMemcpyDeviceToHost));
+    cout << "Back prop results :"<<endl;
+    for(int i=0; i<R.input_size; i++)
+    {
+        if(i%WIDTH==0)
+            cout << "\n";
+        cout << cpu_dout[i] << " ";
+    }
+    cout<<endl;
+}
+
+
