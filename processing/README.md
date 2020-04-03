@@ -2,6 +2,8 @@ The script does the following:
 
 The initial data file has the following format:
 
+#####################################################
+
  PASCAL Annotation Version 1.00
 
 Image filename : "VOC2006/PNGImages/000004.png"
@@ -40,6 +42,7 @@ Original label for object 3 "PAScat" : "PAScat"
 
 Bounding box for object 3 "PAScat" (Xmin, Ymin) - (Xmax, Ymax) : (100, 256) - (175, 380)
 
+#####################################################
 
 Which finally gets converted to:
   
