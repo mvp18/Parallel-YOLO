@@ -20,7 +20,7 @@
 #include <cuda_runtime.h>
 
 #include <device_launch_parameters.h>
-//#include <cublas_v2.h>
+#include <cublas_v2.h>
 #include <cudnn.h>
 
 using namespace std;
@@ -83,7 +83,7 @@ class Relu
         cudnnActivationDescriptor_t activation_descriptor;
         
         cudnnHandle_t cudnn;
-        //cublasHandle_t cublas;
+        cublasHandle_t cublas;
  
         /*** These variables will be on GPU as cache for backward pass ***/
         float *din; //Input to ReLU layer
@@ -97,11 +97,11 @@ class Relu
         float *din_cpu; //Cache for backprop
         float *dot_cpu; //Cache for backprop
  
-        Relu(int _in_channels, int _out_channels, cudnnHandle_t _cudnn, /*cublasHandle_t _cublas,*/
+        Relu(int _in_channels, int _out_channels, cudnnHandle_t _cudnn, cublasHandle_t _cublas,
              int batch_size, int height, int width, int _gpu_id)
         {
             cudnn = _cudnn;
-            //cublas = _cublas;
+            cublas = _cublas;
             gpu_id = _gpu_id;
 
             checkCudaErrors(cudaSetDevice(gpu_id));
@@ -196,13 +196,13 @@ void test_relu()
  
     float *data, *output, *dup, *dout;
     cudnnHandle_t cudnn;
-    //cublasHandle_t cublas;
+    cublasHandle_t cublas;
 
     //cudnnTensorDescriptor_t d1, d2; // dummy descriptors
     cudnnCreate(&cudnn);
-    //cublasCreate(&cublas);
+    cublasCreate(&cublas);
  
-    Relu R(CHANNELS, CHANNELS, cudnn, /*cublas,*/ BATCH_SIZE, HEIGHT, WIDTH, GPU_ID);
+    Relu R(CHANNELS, CHANNELS, cudnn, cublas, BATCH_SIZE, HEIGHT, WIDTH, GPU_ID);
  
     cudaMalloc((void **)&data, sizeof(float) * R.input_size);
     cudaMalloc((void **)&output, sizeof(float) * R.output_size);

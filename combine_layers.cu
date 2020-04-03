@@ -80,8 +80,12 @@ int main() {
     std::cout << "\n---------------JUST RUNNING MAX POOL---------------\n";
     test_forward_mpl();
     std::cout << "\n---------------RUNNING CONV THEN MAX POOL---------------\n";
-    test_relu():
+    
     std::cout << "\n---------------TESTING RELU FORWARD AND BACKWARD---------------\n";
+    test_relu():
+    std::cout << "\n---------------TESTING SOFTMAX FORWARD AND BACKWARD---------------\n";
+
+
 
     // Initialize image and cudnn handles
     int WIDTH_CONV = 4, HEIGHT_CONV = 5, KERNEL_SIZE_CONV=2, PADDING_CONV=1, STRIDE_CONV=1;  //Input to Conv
@@ -294,6 +298,88 @@ void test_relu()
             cout << "\n";
         cout << cpu_dout[i] << " ";
     }
+    cout<<endl;
+}
+
+void test_softmax() 
+{
+    int WIDTH = 5, HEIGHT = 1, BATCH_SIZE = 5, CHANNELS = 1; //Input to softmax is of shape (N,1,1,W)
+    int GPU_ID = 0;
+    checkCudaErrors(cudaSetDevice(GPU_ID));
+ 
+    float *data, *dout;
+    cudnnHandle_t cudnn;
+    cublasHandle_t cublas;
+
+    cudnnCreate(&cudnn);
+    cublasCreate(&cublas);
+ 
+    Softmax R(CHANNELS, CHANNELS, cudnn, cublas, BATCH_SIZE, HEIGHT, WIDTH, GPU_ID);
+ 
+    cudaMalloc((void **)&data, sizeof(float) * R.input_size);
+    cudaMalloc((void **)&dout, sizeof(float) * R.output_size);
+ 
+    //cudaMalloc((void **)&dtarget, sizeof(float) * R.output_size);
+
+    float *cpu_data = (float *)malloc(sizeof(float) * R.input_size);
+    //float *cpu_target = (float *)malloc(sizeof(float) * R.input_size);
+    //float *cpu_loss = (float *)malloc(sizeof(float) * 1);
+    for(int i = 0; i < R.input_size; i++)
+    {
+        cpu_data[i] = i+1.0;
+    }
+    cpu_data[5] = 1;
+    cpu_data[20] = -1;
+ 
+    cout<<"Testing Softmax forward . . ."<<endl;
+    cout << "Input Matrix:";
+    pprint(cpu_data, R.input_size, WIDTH);
+    //cout<<"Target :";
+    //pprint(cpu_target, R.input_size, WIDTH);
+ 
+    cout << "\nApply Softmax:"<<endl;
+    checkCudaErrors(cudaMemcpy(data, cpu_data, sizeof(float) * R.input_size,  cudaMemcpyHostToDevice));
+    //checkCudaErrors(cudaMemcpy(dtarget, cpu_target, sizeof(float) * R.input_size,  cudaMemcpyHostToDevice));
+    
+    R.forward(data, dout);
+ 
+    float *out = (float *)malloc(sizeof(float) * R.output_size);
+    checkCudaErrors(cudaMemcpy(out, dout, sizeof(float) * R.output_size, cudaMemcpyDeviceToHost));
+    //checkCudaErrors(cudaMemcpy(cpu_loss, dloss, sizeof(float) * R.output_size, cudaMemcpyDeviceToHost));
+    //cout<<"Loss = "<<cpu_loss[0]<<endl;
+    cout << "Output Matrix:";
+    pprint(out, R.output_size, WIDTH);
+ 
+ 
+    cout<<"Testing Backward . . ."<<endl;
+    float *cpu_dup = (float *)malloc(sizeof(float) * R.output_size);
+    for(int i=0; i<R.output_size; i++)
+        cpu_dup[i] = 0;
+ 
+    //Remember dL/dy_hat = [0, 0, 0, 0 . . . , -1/y_hat[k], 0, 0, . . ., 0]
+    cpu_dup[2] = -1 / out[2]; //It means 1st row in Batch had target label at index = 2
+    cpu_dup[8] = -1 / out[8]; //It means 1st row in Batch had target label at index = 8 and so on
+    cpu_dup[10] = -1/out[10];
+    cpu_dup[16] = -1/out[16];
+    cpu_dup[22] = -1/out[22];
+
+ 
+    cout << "Upstream Derivatives:";
+    pprint(cpu_dup, R.output_size, WIDTH);
+ 
+    float *dup, *dgrad;
+    cudaMalloc((void **)&dup, sizeof(float) * R.output_size);
+    cudaMalloc((void **)&dgrad, sizeof(float) * R.input_size);
+ 
+    checkCudaErrors(cudaMemcpy(dup, cpu_dup, sizeof(float) * R.output_size,  cudaMemcpyHostToDevice));
+    cout << "\nApply Backward:"<<endl;
+    R.backward(dup, dgrad);
+ 
+    float *cpu_dout = (float *)malloc(sizeof(float) * R.input_size);
+    checkCudaErrors(cudaMemcpy(cpu_dout, dgrad, sizeof(float) * R.input_size, cudaMemcpyDeviceToHost));
+    cout << "Back prop results (Expected y_hat - y_target for each row):"<<endl;
+    pprint(cpu_dout, R.input_size, WIDTH);
+ 
     cout<<endl;
 }
 
