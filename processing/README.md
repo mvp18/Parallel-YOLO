@@ -47,6 +47,7 @@ Bounding box for object 3 "PAScat" (Xmin, Ymin) - (Xmax, Ymax) : (100, 256) - (1
 Which finally gets converted to:
   
 3
+
 PAScat 199 153 249 201
 
 PAScat 134 159 187 192
