@@ -1,5 +1,7 @@
 The script does the following:
+
 The initial data file has the following format:
+
 ` PASCAL Annotation Version 1.00
 
 Image filename : "VOC2006/PNGImages/000004.png"
@@ -24,6 +26,7 @@ Bounding box for object 2 "PAScat" (Xmin, Ymin) - (Xmax, Ymax) : (108, 192) - (1
 Original label for object 3 "PAScat" : "PAScat"
 Bounding box for object 3 "PAScat" (Xmin, Ymin) - (Xmax, Ymax) : (100, 256) - (175, 380)`
 
+
 Which finally gets converted to:
   
 `3
@@ -32,6 +35,7 @@ PAScat 134 159 187 192
 PAScat 124 212 218 317`
 
 The first element specifying the number of objects(n), followed by n lines to describe each object. The content of each line is as follows:
+
 ObjectName xmin ymin xmax ymax.
 
 These version of `xmin`, `xmax`, `ymin`, `ymax` are scaled. The lower coordinates are rounded down and upper coordinates are rounded up.
