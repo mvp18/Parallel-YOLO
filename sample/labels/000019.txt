@@ -1,0 +1,19 @@
+# PASCAL Annotation Version 1.00
+
+Image filename : "VOC2006/PNGImages/000019.png"
+Image size (X x Y x C) : 640 x 480 x 3
+Database : "The VOC2006 Database"
+Objects with ground truth : 2 { "PAScowLeft" "PAScowRight" }
+
+# Note that there might be other objects in the image
+# for which ground truth data has not been provided.
+
+# Top left pixel co-ordinates : (1, 1)
+
+# Details for object 1 ("PAScowLeft")
+Original label for object 1 "PAScowLeft" : "PAScowLeft"
+Bounding box for object 1 "PAScowLeft" (Xmin, Ymin) - (Xmax, Ymax) : (118, 72) - (601, 395)
+
+# Details for object 2 ("PAScowRight")
+Original label for object 2 "PAScowRight" : "PAScowRight"
+Bounding box for object 2 "PAScowRight" (Xmin, Ymin) - (Xmax, Ymax) : (65, 245) - (474, 395)
