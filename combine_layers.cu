@@ -68,7 +68,6 @@
 
 #include "layers.h"
 
-void test_forward_mpl();
 void test_forward_conv();
 void test_mpl();
 void test_conv();
@@ -77,23 +76,23 @@ void pprint(float* , int, int);
 int main() {
     std::cout << "---------------JUST RUNNING CONVOLUTION---------------\n";
     test_forward_conv();
-    std::cout << "\n---------------JUST RUNNING MAX POOL---------------\n";
-    test_forward_mpl();
-    std::cout << "\n---------------RUNNING CONV THEN MAX POOL---------------\n";
-    
+    std::cout << "\n---------------TESTING MAX POOL FORWARD AND BACKWARD---------------\n";
+    test_mpl();
     std::cout << "\n---------------TESTING RELU FORWARD AND BACKWARD---------------\n";
     test_relu():
     std::cout << "\n---------------TESTING SOFTMAX FORWARD AND BACKWARD---------------\n";
+    return 0;
+}
 
-
-
+void test_mpl(){
     // Initialize image and cudnn handles
+    std::cout << "-------- TESTING MAX POOL LAYER --------\n";
     int WIDTH_CONV = 4, HEIGHT_CONV = 5, KERNEL_SIZE_CONV=2, PADDING_CONV=1, STRIDE_CONV=1;  //Input to Conv
     int SIZE_MAX_POOL=2, STRIDE_MAX_POOL=2, PADDING_MAX_POOL=0, HEIGHT_MAX_POOL=(HEIGHT_CONV - KERNEL_SIZE_CONV + 2*PADDING_CONV)/STRIDE_CONV + 1, WIDTH_MAX_POOL=(WIDTH_CONV - KERNEL_SIZE_CONV + 2*PADDING_CONV)/STRIDE_CONV + 1;  //For MaxPool
     int BATCH_SIZE = 1, CHANNELS = 1;     //Image
     int GPU_ID = 0;
     checkCudaErrors(cudaSetDevice(GPU_ID));
-    float *data, *output_conv, *output_max_pool;
+    float *data, *output_conv, *output_max_pool, *input_diff_grad, *output_diff_grad;
     cudnnHandle_t cudnn;
     cublasHandle_t cublas;
     cudnnTensorDescriptor_t d1, d2; // dummy descriptors
@@ -105,61 +104,43 @@ int main() {
     MaxPoolLayer mpl(SIZE_MAX_POOL, STRIDE_MAX_POOL, PADDING_MAX_POOL, BATCH_SIZE, CHANNELS, HEIGHT_MAX_POOL, WIDTH_MAX_POOL, GPU_ID, cudnn);    
 
     //Initialize tensors device
-    cudaMalloc(&data, sizeof(float) * c.input_size);            //CONV INPUT
-    cudaMalloc(&output_conv, sizeof(float) * c.output_size);    //CONV OUTPUT
+    cudaMalloc(&data, sizeof(float) * c.input_size);                 //CONV INPUT
+    cudaMalloc(&output_conv, sizeof(float) * c.output_size);         //CONV OUTPUT
     cudaMalloc(&output_max_pool, sizeof(float) * mpl.output_size);
     //Initalize arrays host
     float *cpu_data = (float *)malloc(sizeof(float) * c.input_size);
-    for(int i = 0;i < c.input_size;i++) cpu_data[i] = 1.0;
+    for(int i = 0;i < c.input_size;i++) cpu_data[i] = i;
     checkCudaErrors(cudaMemcpyAsync(data, cpu_data, sizeof(float) * c.input_size,  cudaMemcpyHostToDevice));
     float* output_matrix = (float *)malloc(sizeof(float)*mpl.output_size);
-    
+    float* output_matrix_conv = (float *)malloc(sizeof(float)*mpl.input_size);
+
     std::cout << "Input Matrix:";
     pprint(cpu_data, c.input_size, WIDTH_CONV);
     std::cout << "\nApply Convolution kernel_size=2, padding=1, stride=1:\n";
     c.forward(data, output_conv);
-    std::cout << "Performing max pool size=(2,2), stride=(2, 2), padding=(0, 0)\n";
+    checkCudaErrors(cudaMemcpy(output_matrix_conv, output_conv, sizeof(float)*mpl.input_size, cudaMemcpyDeviceToHost));
+    std::cout << "\nOutput Matrix From Convolution:";
+    pprint(output_matrix_conv, mpl.input_size, mpl.input_width);
+    std::cout << "\nPerforming max pool size=(2,2), stride=(2, 2), padding=(0, 0)\n";
     mpl.forward(output_conv, output_max_pool);
     checkCudaErrors(cudaMemcpy(output_matrix, output_max_pool, sizeof(float)*mpl.output_size, cudaMemcpyDeviceToHost));
-    std::cout << "\nOutput Matrix:";
+    std::cout << "\nOutput Matrix From Max Pool:";
     pprint(output_matrix, mpl.output_size, mpl.output_width);
-    return 0;
-}
-
-void test_forward_mpl(){
-  // Take 5x5 image, use 3x3 stride
-    int WIDTH = 4, HEIGHT = 4, BATCH_SIZE = 1, CHANNELS = 1, SIZE=2, STRIDE=2, PADDING=0;
-    float *data, *output;
-    cudnnHandle_t cudnn;
-    cudnnCreate(&cudnn);
-
-    MaxPoolLayer mpl(SIZE, STRIDE, PADDING, BATCH_SIZE, CHANNELS, HEIGHT, WIDTH, 0, cudnn);
     
-    float* input_matrix = (float *)malloc(sizeof(float)*mpl.input_size);
-    float* output_matrix = (float *)malloc(sizeof(float)*mpl.output_size);
-    for(int i=0; i<mpl.input_size; i++) input_matrix[i]=i;
-    cudaMalloc(&data, sizeof(float) * mpl.input_size);
-    cudaMalloc(&output, sizeof(float) * mpl.output_size);
-    checkCudaErrors(cudaMemcpyAsync(data, input_matrix, sizeof(float)*mpl.input_size, cudaMemcpyHostToDevice));
+    //Generate a input differential gradient recieved by max pool layer in backprop
+    cudaMalloc(&input_diff_grad, sizeof(float) * mpl.output_size);
+    cudaMalloc(&output_diff_grad, sizeof(float) * mpl.input_size);
+    float *input_diff_grad_cpu = (float *)malloc(sizeof(float) * mpl.output_size);
+    for(int i = 0;i < mpl.output_size;i++) input_diff_grad_cpu[i] = 10.0;
+    checkCudaErrors(cudaMemcpyAsync(input_diff_grad, input_diff_grad_cpu, sizeof(float) * mpl.output_size,  cudaMemcpyHostToDevice));
+    float* output_gradient = (float *)malloc(sizeof(float)*mpl.input_size);
     
-    std::cout << "Input Matrix:";
-    for(int i=0; i<mpl.input_size; i++){
-    if(i%WIDTH==0) std::cout << "\n";
-    std::cout << input_matrix[i] << " ";
-  }
-  
-  std::cout << "\n\nPerforming max pool size=(2,2), stride=(2, 2), padding=(0, 0)\n";
-  mpl.forward(data, output);
-  
-  checkCudaErrors(cudaMemcpy(output_matrix, output, sizeof(float)*mpl.output_size, cudaMemcpyDeviceToHost));
-  std::cout << "\nOutput Matrix:";
-  for(int i=0; i<mpl.output_size; i++){
-    if(i%mpl.output_width==0) std::cout << "\n";
-    std::cout << output_matrix[i] << " ";
-  }
-  std::cout << "\n";
+    mpl.backward(output_conv, input_diff_grad, output_max_pool, output_diff_grad);
+    checkCudaErrors(cudaMemcpy(output_gradient, output_diff_grad, sizeof(float)*mpl.input_size, cudaMemcpyDeviceToHost));
+    std::cout << "\nGradient from Max Pool Layer:";
+    pprint(output_gradient, mpl.input_size, mpl.input_width);    
+    return;
 }
-
 
 void test_forward_conv() {
     int WIDTH = 4, HEIGHT = 5, BATCH_SIZE = 1, CHANNELS = 1;
@@ -201,10 +182,6 @@ void test_forward_conv() {
 
 void test_conv() {
     test_forward_conv();
-}
-
-void test_mpl() {
-    test_forward_mpl();
 }
 
 void pprint(float* matrix, int size, int width){

@@ -402,19 +402,25 @@ public:
                                        output_tensor));     //y    
     }
 
-    void backward(float *data_grad_from_above_conv, float *data_grad_below, cudnnTensorDescriptor_t output_tensor_of_below_conv, float *data_grad_above_from_below_conv, float* data_grad_below_from_below_conv, float* data_below, float* input_tensor, float* output_tensor){
-        checkCUDNN(cudnnPoolingBackward(cudnnHandle,        				//handle
-                                        poolDesc,			            	//poolingDesc
-                                        &alpha,             				//alpha
-                                        poolTensor,         				//yDesc
-                                        output_tensor,               		//y
-                                        poolTensor,         				//dyDesc
-                                        data_grad_from_above_conv,    		//dy 
-                                        output_tensor_of_below_conv,    	//xDesc
-                                        input_tensor,         				//x
-                                        &beta,                          	//beta
-                                        output_tensor_of_below_conv,    	//dxDesc
-                                        data_grad_below_from_below_conv));  //dx
+    void backward(float* input_tensor, float *input_gradient, float *output_tensor, float* output_gradient){
+      // conv layer 1-> max pool -> conv layer 2
+      // input_tensor -> input from conv1
+      // input_gradient -> gradient from conv 2
+      // output_tensor -> output of max pool layer
+      // output_gradient -> output gradient  
+        checkCUDNN(cudnnPoolingBackward(cudnnHandle,              //handle
+                                        poolDesc,                 //poolingDesc
+                                        &alpha,                   //alpha
+                                        poolTensor,               //yDesc
+                                        output_tensor,            //Output of max pool layer
+                                        poolTensor,               //dyDesc
+                                        input_gradient,           //The gradient recieved from conv_layer_2
+                                        input_descriptor,         //xDesc
+                                        input_tensor,             //Input from conv_layer_1
+                                        &beta,                    //beta
+                                        input_descriptor,         //dxDesc
+                                        output_gradient));        //Output differential tensor 
+
     }
 
     void update_weights(){
