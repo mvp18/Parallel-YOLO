@@ -25,11 +25,71 @@ endif()
 include_directories($ENV{CUDNN_PATH} $ENV{CUDNN_PATH}/include)
 link_directories($ENV{CUDNN_PATH} $ENV{CUDNN_PATH}/lib $ENV{CUDNN_PATH}/lib64)
 
-cuda_add_executable(run combine_layers.cu layers.h)
-cuda_add_cublas_to_target(run)
+
+
+
+
+cuda_add_executable(conv layers/convolution.cu)
+cuda_add_cublas_to_target(conv)
 
 if(USE_GFLAGS)
-  target_link_libraries(run gflags cudnn)
+  target_link_libraries(conv gflags cudnn)
 else()
-  target_link_libraries(run cudnn)
+  target_link_libraries(conv cudnn)
 endif()
+
+
+
+
+#cuda_add_executable(FC layers/fully_connected.cu)
+#cuda_add_cublas_to_target(FC)
+
+#if(USE_GFLAGS)
+#  target_link_libraries(FC gflags cudnn)
+#else()
+#  target_link_libraries(FC cudnn)
+#endif()
+
+
+
+cuda_add_executable(max_pool layers/max_pool.cu)
+cuda_add_cublas_to_target(max_pool)
+
+if(USE_GFLAGS)
+  target_link_libraries(max_pool gflags cudnn)
+else()
+  target_link_libraries(max_pool cudnn)
+endif()
+
+
+#cuda_add_executable(relu layers/relu.cu)
+#cuda_add_cublas_to_target(relu)
+
+#if(USE_GFLAGS)
+#  target_link_libraries(relu gflags cudnn)
+#else()
+#  target_link_libraries(relu cudnn)
+#endif()
+
+
+
+#cuda_add_executable(softmax layers/softmax.cu)
+#cuda_add_cublas_to_target(softmax)
+
+#if(USE_GFLAGS)
+#  target_link_libraries(softmax gflags cudnn)
+#else()
+#  target_link_libraries(softmax cudnn)
+#endif()
+
+
+
+
+#cuda_add_executable(run combine_layers.cu layers.h)
+#cuda_add_cublas_to_target(run)
+
+#if(USE_GFLAGS)
+#  target_link_libraries(run gflags cudnn)
+#else()
+#  target_link_libraries(run cudnn)
+#endif()
