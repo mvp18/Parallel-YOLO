@@ -9,6 +9,11 @@ Task Left
 - Build the tiny-yolo architecture
 - And much more...
 
+Run Tests
+==========
+```bash
+bash run_tests.sh
+```
 
 Compilation
 ===========

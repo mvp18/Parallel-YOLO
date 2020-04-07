@@ -1,4 +1,3 @@
-%%cuda --name cudnn.cu
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
@@ -70,7 +69,14 @@ using namespace std;
     }                                                                  \
 } while(0)
 
-class Relu
+
+class Softmax 
+/*Expected Input Tensor Shape [N,1,1,W] in NCHW format in constructor
+N = BATCH_SIZE, W = flattened vector length
+Output is of same shape out = softmax(inp) 
+backprop expects dL/dout (grad_in) and returns dL/dinp
+L = any loss computed from output of softmax eg cross entropy 
+Note that we need to have another layer to compute loss if we like to calculate*/
 {
     public:
  
@@ -79,25 +85,21 @@ class Relu
         
         cudnnTensorDescriptor_t input_descriptor;
         cudnnTensorDescriptor_t output_descriptor;
-
-        cudnnActivationDescriptor_t activation_descriptor;
         
         cudnnHandle_t cudnn;
         cublasHandle_t cublas;
  
         /*** These variables will be on GPU as cache for backward pass ***/
-        float *din; //Input to ReLU layer
-        float *dot;  //Output of ReLU layer
+        float *dot;  //Output of softmax i.e., dot = softmax(d_input) in forward, necessary to cache for backward
  
         /*** These variables will be on CPU ***/
         int input_size, output_size;
         int out_height, out_width;
         int in_channels, out_channels;
         int gpu_id;
-        float *din_cpu; //Cache for backprop
         float *dot_cpu; //Cache for backprop
  
-        Relu(int _in_channels, int _out_channels, cudnnHandle_t _cudnn, cublasHandle_t _cublas,
+        Softmax(int _in_channels, int _out_channels, cudnnHandle_t _cudnn, cublasHandle_t _cublas,
              int batch_size, int height, int width, int _gpu_id)
         {
             cudnn = _cudnn;
@@ -129,29 +131,20 @@ class Relu
                                                       out_height,
                                                       out_width));
             
-        
-            checkCUDNN(cudnnCreateActivationDescriptor(&activation_descriptor));
-            checkCUDNN(cudnnSetActivationDescriptor(activation_descriptor,
-                                         CUDNN_ACTIVATION_RELU,
-                                         CUDNN_NOT_PROPAGATE_NAN,
-                                         0.0)); //Clip value for Clipped Relu, Not of any use here
-         
-            /*** Allocate memory to GPU and CPU ***/
+            /*** Allocate memory to GPU placeholders ***/
             input_size = batch_size * in_channels * height * width;
-            output_size = input_size;
+            output_size = input_size; //output_size means output of softmax, not the scalar loss
          
-            din_cpu = (float *)malloc(sizeof(float) * input_size);
+            checkCudaErrors(cudaMalloc(&dot, sizeof(float) * output_size));
             dot_cpu = (float *)malloc(sizeof(float) * output_size);
-         
-            checkCudaErrors(cudaMalloc(&din, sizeof(float)*input_size));
-            checkCudaErrors(cudaMalloc(&dot, sizeof(float)*output_size));
         }
  
         void forward(float *d_input, float *d_output)
         {
-            checkCUDNN(cudnnActivationForward(
+            checkCUDNN(cudnnSoftmaxForward(
                 cudnn,
-                activation_descriptor,
+                CUDNN_SOFTMAX_ACCURATE,
+                CUDNN_SOFTMAX_MODE_INSTANCE,
                 &alpha,
                 input_descriptor,
                 d_input,
@@ -159,28 +152,23 @@ class Relu
                 output_descriptor,
                 d_output
             ));
-
-            ///Store Input Output in Cache for backprop
+         
+            //Store the output of softmax for backprop
             checkCudaErrors(cudaMemcpy(dot_cpu, d_output, sizeof(float) * output_size, cudaMemcpyDeviceToHost));
             checkCudaErrors(cudaMemcpy(dot, dot_cpu, sizeof(float) * output_size,  cudaMemcpyHostToDevice));
-         
-            checkCudaErrors(cudaMemcpy(din_cpu, d_input, sizeof(float) * output_size, cudaMemcpyDeviceToHost));
-            checkCudaErrors(cudaMemcpy(din, din_cpu, sizeof(float) * output_size,  cudaMemcpyHostToDevice));
-
         }
  
-        void backward(float *grad_above, float *grad_out/*, float *d_input, float *d_output*/) //
+        void backward(float *grad_above, float *grad_out)
         {
-            checkCUDNN(cudnnActivationBackward(
+            checkCUDNN(cudnnSoftmaxBackward(
                 cudnn,
-                activation_descriptor,
+                CUDNN_SOFTMAX_ACCURATE,
+                CUDNN_SOFTMAX_MODE_INSTANCE,
                 &alpha,
                 output_descriptor,
                 dot,
                 output_descriptor,
                 grad_above,
-                input_descriptor,
-                din, //Not sure why this parameter is required!
                 &beta,
                 input_descriptor,
                 grad_out
@@ -188,95 +176,102 @@ class Relu
         }
 };
 
-void test_relu() 
+void pprint(float *a, int n, int WIDTH)
 {
-    int WIDTH = 5, HEIGHT = 5, BATCH_SIZE = 1, CHANNELS = 1;
+    for(int i=0; i<n; i++)
+    {
+        if(i % WIDTH==0)
+            cout << "\n";
+        cout << a[i] << " ";
+    }
+    cout<<endl;
+}
+
+void test_softmax() 
+{
+    int WIDTH = 5, HEIGHT = 1, BATCH_SIZE = 5, CHANNELS = 1; //Input to softmax is of shape (N,1,1,W)
     int GPU_ID = 0;
     checkCudaErrors(cudaSetDevice(GPU_ID));
  
-    float *data, *output, *dup, *dout;
+    float *data, *dout;
     cudnnHandle_t cudnn;
     cublasHandle_t cublas;
 
-    //cudnnTensorDescriptor_t d1, d2; // dummy descriptors
     cudnnCreate(&cudnn);
     cublasCreate(&cublas);
  
-    Relu R(CHANNELS, CHANNELS, cudnn, cublas, BATCH_SIZE, HEIGHT, WIDTH, GPU_ID);
+    Softmax R(CHANNELS, CHANNELS, cudnn, cublas, BATCH_SIZE, HEIGHT, WIDTH, GPU_ID);
  
     cudaMalloc((void **)&data, sizeof(float) * R.input_size);
-    cudaMalloc((void **)&output, sizeof(float) * R.output_size);
     cudaMalloc((void **)&dout, sizeof(float) * R.output_size);
-    cudaMalloc((void **)&dup, sizeof(float) * R.output_size);
+ 
+    //cudaMalloc((void **)&dtarget, sizeof(float) * R.output_size);
 
     float *cpu_data = (float *)malloc(sizeof(float) * R.input_size);
+    //float *cpu_target = (float *)malloc(sizeof(float) * R.input_size);
+    //float *cpu_loss = (float *)malloc(sizeof(float) * 1);
     for(int i = 0; i < R.input_size; i++)
-        cpu_data[i] = -12.0 + i;
-    cpu_data[1] = 3234.0; //to check clipping
-    cpu_data[20] = 3566.0;
- 
-    cout<<"Testing Forward . . ."<<endl;
- 
-    cout << "Input Matrix:"<<endl;
-    for(int i=0; i<R.input_size; i++)
     {
-        if(i%WIDTH==0)
-            cout << "\n";
-        cout << cpu_data[i] << " ";
+        cpu_data[i] = i+1.0;
     }
-    cout << "\nApply ReLU:"<<endl;
+    cpu_data[5] = 1;
+    cpu_data[20] = -1;
  
+    cout<<"Testing Softmax forward . . ."<<endl;
+    cout << "Input Matrix:";
+    pprint(cpu_data, R.input_size, WIDTH);
+    //cout<<"Target :";
+    //pprint(cpu_target, R.input_size, WIDTH);
+ 
+    cout << "\nApply Softmax:"<<endl;
     checkCudaErrors(cudaMemcpy(data, cpu_data, sizeof(float) * R.input_size,  cudaMemcpyHostToDevice));
-    cout << "\nApply ReLU 2:"<<endl;
-    R.forward(data, output);
+    //checkCudaErrors(cudaMemcpy(dtarget, cpu_target, sizeof(float) * R.input_size,  cudaMemcpyHostToDevice));
+    
+    R.forward(data, dout);
  
     float *out = (float *)malloc(sizeof(float) * R.output_size);
-    checkCudaErrors(cudaMemcpy(out, output, sizeof(float) * R.output_size, cudaMemcpyDeviceToHost));
-    cout << "Output Matrix:"<<endl;
-    for(int i=0; i<R.output_size; i++)
-    {
-        if(i%WIDTH==0)
-            cout << "\n";
-        cout << out[i] << " ";
-    }
-    cout<<endl;
+    checkCudaErrors(cudaMemcpy(out, dout, sizeof(float) * R.output_size, cudaMemcpyDeviceToHost));
+    //checkCudaErrors(cudaMemcpy(cpu_loss, dloss, sizeof(float) * R.output_size, cudaMemcpyDeviceToHost));
+    //cout<<"Loss = "<<cpu_loss[0]<<endl;
+    cout << "Output Matrix:";
+    pprint(out, R.output_size, WIDTH);
  
  
     cout<<"Testing Backward . . ."<<endl;
- 
     float *cpu_dup = (float *)malloc(sizeof(float) * R.output_size);
     for(int i=0; i<R.output_size; i++)
-        cpu_dup[i] = 100 + i;
+        cpu_dup[i] = 0;
+ 
+    //Remember dL/dy_hat = [0, 0, 0, 0 . . . , -1/y_hat[k], 0, 0, . . ., 0]
+    cpu_dup[2] = -1 / out[2]; //It means 1st row in Batch had target label at index = 2
+    cpu_dup[8] = -1 / out[8]; //It means 1st row in Batch had target label at index = 8 and so on
+    cpu_dup[10] = -1/out[10];
+    cpu_dup[16] = -1/out[16];
+    cpu_dup[22] = -1/out[22];
+
  
     cout << "Upstream Derivatives:";
-    for(int i=0; i<R.output_size; i++)
-    {
-        if(i%WIDTH==0)
-            cout << "\n";
-        cout << cpu_dup[i] << " ";
-    }
-    cout<<endl;
+    pprint(cpu_dup, R.output_size, WIDTH);
+ 
+    float *dup, *dgrad;
+    cudaMalloc((void **)&dup, sizeof(float) * R.output_size);
+    cudaMalloc((void **)&dgrad, sizeof(float) * R.input_size);
  
     checkCudaErrors(cudaMemcpy(dup, cpu_dup, sizeof(float) * R.output_size,  cudaMemcpyHostToDevice));
-
     cout << "\nApply Backward:"<<endl;
-    R.backward(dup, dout);
+    R.backward(dup, dgrad);
  
     float *cpu_dout = (float *)malloc(sizeof(float) * R.input_size);
-    checkCudaErrors(cudaMemcpy(cpu_dout, dout, sizeof(float) * R.input_size, cudaMemcpyDeviceToHost));
-    cout << "Back prop results :"<<endl;
-    for(int i=0; i<R.input_size; i++)
-    {
-        if(i%WIDTH==0)
-            cout << "\n";
-        cout << cpu_dout[i] << " ";
-    }
+    checkCudaErrors(cudaMemcpy(cpu_dout, dgrad, sizeof(float) * R.input_size, cudaMemcpyDeviceToHost));
+    cout << "Back prop results (Expected y_hat - y_target for each row):"<<endl;
+    pprint(cpu_dout, R.input_size, WIDTH);
+ 
     cout<<endl;
 }
 
 int main()
 {
     cout<<"In main function . . ."<<endl;
-    test_relu();
+    test_softmax();
     return 0;
 }
