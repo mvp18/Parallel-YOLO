@@ -3,14 +3,14 @@
 Task Left
 =========
 
-- Write SoftMax layer
-- Write Preprocessing pipeline
 - Build a small model and train on Mnist (for testing purposes)
 - Build the tiny-yolo architecture
 - And much more...
 
 Run Tests
 ==========
+To ensure all layers are compiled successfully and execute successfully, run the command below from the root directory.
+
 ```bash
 bash run_tests.sh
 ```
@@ -28,8 +28,8 @@ To compile with CMake, run the following commands:
 ~/Parallel-YOLO/build: $ cmake ..
 ~/Parallel-YOLO/build: $ make
 
-Run simply by
-~/Parallel-YOLO/build: $ ./run
+Run simply by running the required executable. eg- max_pool
+~/Parallel-YOLO/build: $ ./max_pool
 ```
 
 If compiling under linux, make sure to either set the ```CUDNN_PATH``` environment variable to the path CUDNN is installed to, or extract CUDNN to the CUDA toolkit path.
