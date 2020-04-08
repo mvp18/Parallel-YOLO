@@ -4,7 +4,7 @@
 i=1
 rm -rf NewAnnotations
 mkdir -p NewAnnotations
-for file in Annotations/*
+for file in ../sample/labels/*
 do
 
     x=$( grep "Image size" $file | cut -d "x" -f3 | grep -Eo -m1 '[[:digit:]]*' )
