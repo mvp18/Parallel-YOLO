@@ -59,3 +59,9 @@ The first element specifying the number of objects(n), followed by n lines to de
 ObjectName xmin ymin xmax ymax.
 ```
 These version of `xmin`, `xmax`, `ymin`, `ymax` are scaled. The lower coordinates are rounded down and upper coordinates are rounded up.
+
+# combineScript.sh
+This script is to be run after running `pText_script.sh`. This takes the data of 4 images and combines them into one by down scaling the image data. This script follows the following pattern for bounding box arrangement:
+
+4k + 1 image on top left, 4k + 2 image on top right, 4k + 3 image on bottom left and 4k + 4 image on bottom right.
+    
