@@ -12,4 +12,3 @@ for x in images:
 
     cv2.imwrite("resized_" + str(i) + ".png", re)
     i = i + 1
-end
