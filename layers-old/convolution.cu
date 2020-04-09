@@ -408,6 +408,33 @@ public:
         checkCudaErrors(cublasSaxpy(cublas, static_cast<int>(bs),
                                     &alpha, grad_bias, 1, param_bias, 1));
     }
+
+    void save_params(const char* fileprefix) {
+
+        // get full filenames from the file prefix provided
+        std::string param_kernel_file = std::string(fileprefix) + ".bin";
+        std::string param_bias_file = std::string(fileprefix) + ".bias.bin";
+        
+        // Writing the weights to the file
+        FILE *fp = fopen(param_kernel_file.c_str(), "wb");
+        if (!fp) {
+            printf("FILE ERROR: Cannot open file %s\n", param_kernel_file.c_str());
+            exit(2);
+        }
+        fwrite(&cpu_param_kernel[0], sizeof(float), in_channels * kernel_size * kernel_size * out_channels, fp);
+        fclose(fp);
+    
+        // Write the bias to the file
+        fp = fopen(param_bias_file.c_str(), "wb");
+        if (!fp) {
+            printf("FILE ERROR: Cannot open file %s\n", param_bias_file.c_str());
+            exit(2);
+        }
+        fwrite(&cpu_param_bias[0], sizeof(float), out_channels, fp);
+        fclose(fp);
+    
+    }
+
 };
 
 void test_forward() {
