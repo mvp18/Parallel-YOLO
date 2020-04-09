@@ -16,4 +16,3 @@ for i in range(654):
     final = cv2.resize(vcat1, (416, 416))
 
     cv2.imwrite("combined_" + str(i + 1) + ".png", final)
-end
