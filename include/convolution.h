@@ -203,11 +203,11 @@ class Conv
             cpu_param_bias = std::vector<float>(out_channels, 0); //BIAS INIT TO ZERO!
 
             // Initialize Parameters on GPU
-            // init_weights();
-            init_test_weights();
+            init_weights();
+            //init_test_weights();
 
             // Move Initialized Weights to GPU
-            // checkCudaErrors(cudaMemcpyAsync(param_kernel, &cpu_param_kernel[0],     sizeof(float) * cpu_param_kernel.size(),  cudaMemcpyHostToDevice));
+            checkCudaErrors(cudaMemcpyAsync(param_kernel, &cpu_param_kernel[0],     sizeof(float) * cpu_param_kernel.size(),  cudaMemcpyHostToDevice));
             checkCudaErrors(cudaMemcpyAsync(param_bias, &cpu_param_bias[0], sizeof(float) * cpu_param_bias.size(),  cudaMemcpyHostToDevice));
         }
 
@@ -274,9 +274,10 @@ class Conv
             std::uniform_real_distribution<> dconv(-wconv, wconv);
             for (auto&& iter : cpu_param_kernel)
                 iter = static_cast<float>(dconv(gen));
+
         }
 
-        void forward(float *d_input, float *d_output/*, cudnnTensorDescriptor_t& input_descriptor, cudnnTensorDescriptor_t& output_descriptor*/) 
+        void forward(float *d_input, float *d_output) 
         {
             checkCUDNN(cudnnConvolutionForward(cudnn,
                                               &alpha,

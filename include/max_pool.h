@@ -2,7 +2,7 @@ class MaxPoolLayer
 {
     public:
         float alpha = 1.0f, beta = 0.0f;
-        int gpu_id, input_height, input_width, input_size, out_height, out_width, output_size;
+        int gpu_id, input_height, input_width, input_size, out_height, out_width, output_size, out_channels;
 
         cudnnPoolingDescriptor_t poolDesc;
         cudnnTensorDescriptor_t input_descriptor, poolTensor;
@@ -27,6 +27,7 @@ class MaxPoolLayer
 
             out_height = (conv_out_height - size + 2*padding) / stride + 1;
             out_width = (conv_out_width - size + 2*padding) / stride + 1;
+            out_channels = conv_out_channel;
 
             output_size = batch_size * conv_out_channel* out_height * out_width;
 
