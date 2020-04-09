@@ -332,8 +332,8 @@ class Conv
             int ks = in_channels * kernel_size * kernel_size * out_channels;
             int bs = out_channels;
             checkCudaErrors(cublasSaxpy(cublas, static_cast<int>(ks),
-                                        &alpha, grad_kernel, 1, param_kernel, 1));
+                                        &learning_rate, grad_kernel, 1, param_kernel, 1));
             checkCudaErrors(cublasSaxpy(cublas, static_cast<int>(bs),
-                                        &alpha, grad_bias, 1, param_bias, 1));
+                                        &learning_rate, grad_bias, 1, param_bias, 1));
         }
 };
