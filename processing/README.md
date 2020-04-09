@@ -15,28 +15,28 @@ Objects with ground truth : 3 { "PAScat" "PAScat" "PAScat" }
 
 
  Note that there might be other objects in the image
- 
+
  for which ground truth data has not been provided.
 
  Top left pixel co-ordinates : (1, 1)
 
 
  Details for object 1 ("PAScat")
- 
+
 Original label for object 1 "PAScat" : "PAScat"
 
 Bounding box for object 1 "PAScat" (Xmin, Ymin) - (Xmax, Ymax) : (161, 185) - (200, 241)
 
 
  Details for object 2 ("PAScat")
- 
+
 Original label for object 2 "PAScat" : "PAScat"
 
 Bounding box for object 2 "PAScat" (Xmin, Ymin) - (Xmax, Ymax) : (108, 192) - (150, 230)
 
 
  Details for object 3 ("PAScat")
- 
+
 Original label for object 3 "PAScat" : "PAScat"
 
 Bounding box for object 3 "PAScat" (Xmin, Ymin) - (Xmax, Ymax) : (100, 256) - (175, 380)
@@ -67,4 +67,6 @@ This script is to be run after running `pText_script.sh`. This takes the data of
 
 # CombineFourImage.py
 This script is to be run after running running `resize.py`. This combines four images as mentioned above in `combineScript.sh` and writes it as `combined_(#).png`.
-    
+
+# readFile.c
+This file has function readFile which takes as input the filename and returns a `float*` array which comprises of the scanned entries from the file.
