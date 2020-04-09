@@ -415,7 +415,7 @@ public:
         std::string param_kernel_file = std::string(fileprefix) + ".bin";
         std::string param_bias_file = std::string(fileprefix) + ".bias.bin";
         
-        // Writing the weights to the file
+        // Writing the kernel weights to the file
         FILE *fp = fopen(param_kernel_file.c_str(), "wb");
         if (!fp) {
             printf("FILE ERROR: Cannot open file %s\n", param_kernel_file.c_str());
@@ -441,7 +441,7 @@ public:
         std::string param_kernel_file = std::string(fileprefix) + ".bin";
         std::string param_bias_file = std::string(fileprefix) + ".bias.bin";
         
-        // reading the weights from the file
+        // reading the kernel weights from the file
         FILE *fp = fopen(param_kernel_file.c_str(), "rb");
         if (!fp) {
             printf("FILE ERROR: Cannot open file %s\n", param_kernel_file.c_str());
