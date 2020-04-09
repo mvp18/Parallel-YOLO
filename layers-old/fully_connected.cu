@@ -247,6 +247,34 @@ public:
     
     }
 
+    bool load_params(const char* fileprefix) {
+        
+        // get full filenames from the file prefix provided
+        std::string weight_file = std::string(fileprefix) + ".bin";
+        std::string bias_file = std::string(fileprefix) + ".bias.bin";
+        
+        // reading the weights from the file
+        FILE *fp = fopen(weight_file.c_str(), "rb");
+        if (!fp) {
+            printf("FILE ERROR: Cannot open file %s\n", weight_file.c_str());
+            return false;
+        }
+        fread(&cpu_weights[0], sizeof(float), output_size * input_size, fp);
+        fclose(fp);
+    
+        // reading the bias from the file
+        fp = fopen(bias_file.c_str(), "rb");
+        if (!fp) {
+            printf("FILE ERROR: Cannot open file %s\n", bias_file.c_str());
+            return false;
+        }
+        fread(&cpu_bias[0], sizeof(float), output_size, fp);
+        fclose(fp);
+    
+        return true;
+    
+    }
+
 };
 
 void test_forward() {
