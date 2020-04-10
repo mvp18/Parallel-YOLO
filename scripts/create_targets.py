@@ -2,12 +2,16 @@ import os
 import cv2
 import numpy as np
 from config import *
+import sys
+
+base_path = os.getcwd() + "/"
+mode = str(sys.argv[1])
 
 def get_classes():
 	obj_dict = {}
 	obj_id = 0
-	for filename in os.listdir('../sample/NewAnnotations'):
-		with open('../sample/NewAnnotations/' + filename, 'r') as f:
+	for filename in os.listdir(base_path + '../data/' + mode + '/Annotations/'):
+		with open(base_path + '../data/' + mode + '/Annotations/' + filename, 'r') as f:
 			data = f.read()
 		
 		lines = data.split('\n')
@@ -51,12 +55,12 @@ def bb_intersection_over_union(boxA, boxB):
 	return iou
 
 def create_data(num_classes, obj2idx, idx2obj):
-	if not os.path.exists('../sample/processed_annotations/'):
-		os.mkdir('../sample/processed_annotations/')
+	if not os.path.exists(base_path + '../data/' + mode + '/targets'):
+		os.mkdir(base_path + '../data/' + mode + '/targets')
 
 	obj_dict = {} # To store object labels
-	for filename in os.listdir('../sample/NewAnnotations'):
-		with open('../sample/NewAnnotations/' + filename, 'r') as f:
+	for filename in os.listdir(base_path + '../data/' + mode + '/Annotations/'):
+		with open(base_path + '../data/' + mode + '/Annotations/' + filename, 'r') as f:
 			data = f.read()
 		
 		lines = data.split('\n')
@@ -154,10 +158,8 @@ def create_data(num_classes, obj2idx, idx2obj):
 			targets[0, y, x, anchor_id, 5 + label_id] = 1
 
 		# masks and targets need to be written to a file
-		np.savetxt('../sample/processed_annotations/mask_' + filename, masks.ravel())
-		np.savetxt('../sample/processed_annotations/target_' + filename, targets.ravel())
-
-		break
+		np.savetxt(base_path + '../data/' + mode + '/targets' + '/mask_' + filename, masks.ravel())
+		np.savetxt(base_path + '../data/' + mode + '/targets' + '/target_' + filename, targets.ravel())
 
 num_classes, obj2idx, idx2obj = get_classes()
 create_data(num_classes, obj2idx, idx2obj)

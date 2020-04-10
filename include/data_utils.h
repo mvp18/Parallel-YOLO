@@ -1,15 +1,20 @@
-#include<stdlib.h>
-#include<stdio.h>
-#include<png.h>
 
-int width, height;
-png_byte color_type;
-float *image;
-png_byte bit_depth;
-png_bytep *row_pointers = NULL;
 
-void load(string filename) 
-{
+char* str_to_char_arr(string str) {
+	char *c = strcpy(new char[str.length() + 1], str.c_str());
+	return c;
+}
+
+/* Great resource for compilation : https://stackoverflow.com/questions/30980383/cmake-compile-options-for-libpng */
+float* get_img(string filename_)
+{	
+	int width, height;
+	png_byte color_type;
+	float *image;
+	png_byte bit_depth;
+	png_bytep *row_pointers = NULL;
+
+	char *filename = str_to_char_arr(filename_);
 	FILE *fp = fopen(filename, "rb");
 	png_structp png = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 	if(!png) abort();
@@ -35,14 +40,10 @@ void load(string filename)
 	png_read_image(png, row_pointers);
 	fclose(fp);
 	png_destroy_read_struct(&png, &info, NULL);
-}
 
-float* flatten(string filename)
-{
-	int i, j, x, y;
-	load(filename);
+	int x,y;
 
-	image = malloc(3 * height * width * sizeof(int*));
+	image = (float *)malloc(3 * height * width * sizeof(int*));
 	int stride = height * width;
 	for(y = 0; y < height; y++)
 	{
@@ -57,4 +58,29 @@ float* flatten(string filename)
 	}
 	
 	return image;
+}
+
+float* get_float_array(string filename_) {
+	char *filename = str_to_char_arr(filename_);
+	// Reads a file of floats and returns it in a pointer
+	vector<float> arr;
+	// read points
+	FILE *in_file;
+	in_file = fopen(filename, "r");
+
+    if (in_file == NULL)
+    {
+        printf("Can't open file for reading.\n");
+        exit(0);
+    }
+    
+	float result;
+	float n;
+	while(result = fscanf(in_file, "%f", &n) != EOF) arr.push_back(result);
+
+	float *out = (float *)malloc(sizeof(float) * arr.size());
+	for(int i = 0;i < arr.size();i++) out[i] = arr[i];
+    fclose(in_file);
+
+	return out;
 }

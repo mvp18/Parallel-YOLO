@@ -1,7 +1,6 @@
 class Sigmoid
 {
     public:
- 
         const float alpha = 1.0f;
         const float beta = 0.0f;
         
@@ -19,14 +18,15 @@ class Sigmoid
  
         /*** These variables will be on CPU ***/
         int input_size, output_size;
-        int out_height, out_width;
+        int input_height, out_height;
         int in_channels, out_channels;
+        int input_width, out_width;
         int gpu_id;
         float *din_cpu; //Cache for backprop
         float *dot_cpu; //Cache for backprop
  
-        Sigmoid(int _in_channels, int _out_channels, cudnnHandle_t _cudnn, cublasHandle_t _cublas,
-             int batch_size, int height, int width, int _gpu_id)
+        Sigmoid(int _in_channels, int _out_channels, cudnnHandle_t _cudnn, cublasHandle_t _cublas, int batch_size, int height, int width, int _gpu_id,
+             cudnnTensorDescriptor_t& _input_descriptor, cudnnTensorDescriptor_t& _output_descriptor, int init_io_desc)
         {
             cudnn = _cudnn;
             cublas = _cublas;
@@ -36,18 +36,25 @@ class Sigmoid
          
             in_channels = _in_channels;
             out_channels = _out_channels;
-            out_width = width;
+            input_width = out_width = width;
             out_height = height;
+            input_height = height;
          
-            checkCUDNN(cudnnCreateTensorDescriptor(&input_descriptor));
-            checkCUDNN(cudnnSetTensor4dDescriptor(input_descriptor, 
-                                                      CUDNN_TENSOR_NCHW,
-                                                      CUDNN_DATA_FLOAT,
-                                                      batch_size,
-                                                      in_channels,
-                                                      height,
-                                                      width));
-                
+            if(init_io_desc)
+            {
+                checkCUDNN(cudnnCreateTensorDescriptor(&input_descriptor));
+                checkCUDNN(cudnnSetTensor4dDescriptor(input_descriptor, 
+                                                          CUDNN_TENSOR_NCHW,
+                                                          CUDNN_DATA_FLOAT,
+                                                          batch_size,
+                                                          in_channels,
+                                                          height,
+                                                          width));
+            }
+            else
+                input_descriptor = _input_descriptor;
+
+
             checkCUDNN(cudnnCreateTensorDescriptor(&output_descriptor));
             checkCUDNN(cudnnSetTensor4dDescriptor(output_descriptor,
                                                       CUDNN_TENSOR_NCHW,
@@ -75,6 +82,13 @@ class Sigmoid
             checkCudaErrors(cudaMalloc(&dot, sizeof(float)*output_size));
         }
  
+        ~Sigmoid()
+        {
+            checkCUDNN(cudnnDestroyTensorDescriptor(input_descriptor));
+            checkCUDNN(cudnnDestroyTensorDescriptor(output_descriptor));
+            checkCUDNN(cudnnDestroyActivationDescriptor(activation_descriptor));
+        }
+ 
         void forward(float *d_input, float *d_output)
         {
             checkCUDNN(cudnnActivationForward(
@@ -94,10 +108,9 @@ class Sigmoid
          
             checkCudaErrors(cudaMemcpy(din_cpu, d_input, sizeof(float) * output_size, cudaMemcpyDeviceToHost));
             checkCudaErrors(cudaMemcpy(din, din_cpu, sizeof(float) * output_size,  cudaMemcpyHostToDevice));
-
         }
  
-        void backward(float *grad_above, float *grad_out)
+        void backward(float *grad_above, float *grad_out) //
         {
             checkCUDNN(cudnnActivationBackward(
                 cudnn,

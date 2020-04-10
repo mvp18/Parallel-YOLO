@@ -495,11 +495,11 @@ void test_sigmoid()
     cudnnHandle_t cudnn;
     cublasHandle_t cublas;
 
-    //cudnnTensorDescriptor_t d1, d2; // dummy descriptors
+    cudnnTensorDescriptor_t d1, d2; // dummy descriptors
     cudnnCreate(&cudnn);
     cublasCreate(&cublas);
  
-    Sigmoid R(CHANNELS, CHANNELS, cudnn, cublas, BATCH_SIZE, HEIGHT, WIDTH, GPU_ID);
+    Sigmoid R(CHANNELS, CHANNELS, cudnn, cublas, BATCH_SIZE, HEIGHT, WIDTH, GPU_ID, d1, d2, true);
  
     cudaMalloc((void **)&data, sizeof(float) * R.input_size);
     cudaMalloc((void **)&output, sizeof(float) * R.output_size);
@@ -524,7 +524,7 @@ void test_sigmoid()
     // std::cout << "\nApply ReLU:"<<std::endl;
  
     checkCudaErrors(cudaMemcpy(data, cpu_data, sizeof(float) * R.input_size,  cudaMemcpyHostToDevice));
-    // std::cout << "\nApply ReLU 2:"<<std::endl;
+    std::cout << "\nApply Sigmoid\n\n\n:"<<std::endl;
     R.forward(data, output);
  
     float *out = (float *)malloc(sizeof(float) * R.output_size);
@@ -561,6 +561,8 @@ void test_sigmoid()
  
     float *cpu_dout = (float *)malloc(sizeof(float) * R.input_size);
     checkCudaErrors(cudaMemcpy(cpu_dout, dout, sizeof(float) * R.input_size, cudaMemcpyDeviceToHost));
+
+    std::cout << "Done\n\n\n";
     // std::cout << "Back prop results :"<<std::endl;
     // for(int i=0; i<R.input_size; i++)
     // {
@@ -581,11 +583,12 @@ void test() {
     printf("\n\n\n----------Relu Test Passed!-----------\n\n\n");
     test_conv_relu_maxpool();
     printf("\n\n\n----------Conv Relu Maxpool Test Passed!-----------\n\n\n");
-    test_sigmoid();
-    printf("\n\n\n----------Sigmoid Test Passed!-----------\n\n\n");
+    // test_sigmoid();
+    // printf("\n\n\n----------Sigmoid Test Passed!-----------\n\n\n");
 }
 
 int main() {
     test();
+    printf("Out\n\n\n");
     return 0;
 }

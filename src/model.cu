@@ -3,6 +3,8 @@
 #include <cmath>
 #include <ctime>
 #include <cfloat>
+#include<stdlib.h>
+#include<stdio.h>
 
 #include <algorithm>
 #include <chrono>
@@ -21,6 +23,8 @@
 #include <device_launch_parameters.h>
 #include <cublas_v2.h>
 #include <cudnn.h>
+
+#include<png.h>
 
 using namespace std;
 
@@ -69,9 +73,16 @@ using namespace std;
     }                                                                  \
 } while(0)
 
+static inline unsigned int RoundUp(unsigned int nominator, unsigned int denominator)
+{
+    return (nominator + denominator - 1) / denominator;
+}
+
 #include "../include/convolution.h"
 #include "../include/max_pool.h"
 #include "../include/relu.h"
+#include "../include/sigmoid.h"
+#include "../include/data_utils.h"
 
 void pprint(float* matrix, int size, int width)
 {
@@ -85,6 +96,26 @@ void pprint(float* matrix, int size, int width)
 }
 
 
+__global__ void MSELossBackprop(float *grad_data, float *output, float *target, float *mask, int batch_size)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= batch_size)
+        return;
+
+    // const int label_value = static_cast<int>(label[idx]);
+
+    // For each item in the batch, decrease the result of the label's value by 1
+    // diff[idx * num_labels + label_value] -= 1.0f;
+    grad_data[idx] = 2.0 * mask[idx] * (output[idx] - target[idx]);
+}
+
+float MSELoss(float *cpu_out, float *cpu_target, float *cpu_mask) {
+    int N = sizeof(cpu_out)/sizeof(float);
+    float loss = 0.0;
+
+    for(int i = 0;i < N;i++) loss += (cpu_mask[i] * pow((cpu_out[i] - cpu_target[i]),2.0));
+    return loss/(1.0 * N);
+}
 
 int main()
 {
@@ -92,8 +123,11 @@ int main()
     int num_classes, num_anchors;
     int batch_size;
     float learning_rate;
+    int epochs;
+    int ITERS;
+    int num_images;
     int GPU_ID = 0;
- 
+    
     /* Read from config file */
     input_height = input_width = 416;
     in_channels = 3;
@@ -101,6 +135,9 @@ int main()
     num_classes = 15;
     num_anchors = 5;
     learning_rate = 0.0001;
+    num_images = 12;
+    epochs = 300;
+    ITERS = epochs * num_images;
 
     /* Initialise few variables */
     int input_size = batch_size * in_channels * input_height * input_width;
@@ -143,27 +180,19 @@ int main()
     Relu r8(c8.out_channels, c8.out_channels, cudnn, cublas, batch_size, c8.out_height, c8.out_width, GPU_ID, c8.output_descriptor, d2, false);
  
     Conv c9(r8.out_channels, final_output_depth, 3, 1, 1, cudnn, cublas, batch_size, r8.out_width, r8.out_height, true, true, GPU_ID, r8.output_descriptor, d2, false);
- 
-    /* Final Input Output on CPU */
-    float *cpu_data = (float *)malloc(sizeof(float) * input_size);
-    for(int i=0; i<input_size; i++)
-        cpu_data[i] = 255.0;
-    float *cpu_out = (float *)malloc(sizeof(float) * c9.output_size);
- 
-    float *grad_data_cpu = (float *)malloc(sizeof(float) * c9.output_size); //Upstream derivative of NxCx13x13 from Loss calculations
-    for(int i=0; i<c9.output_size; i++)
-        grad_data_cpu[i] = 100.0;
- 
+    Sigmoid s9(c9.out_channels, c9.out_channels, cudnn, cublas, batch_size, c9.out_height, c9.out_width, GPU_ID, c9.output_descriptor, d2, false);
+       
     /* Data buffers for Forward propagation on GPU */
+    float *mask, *target; // targets for loss computation
     float *data, *c1_out, *r1_out, *m1_out, *c2_out, *r2_out, *m2_out, *c3_out, *r3_out, *c4_out, *r4_out, *c5_out, *r5_out, *m5_out;
-    float *c6_out, *r6_out, *m6_out, *c7_out, *r7_out, *c8_out, *r8_out, *c9_out;
+    float *c6_out, *r6_out, *m6_out, *c7_out, *r7_out, *c8_out, *r8_out, *c9_out, *s9_out;
  
     /* Data buffers on GPU for backward propagation */
-    float *grad_data, *r1_dout, *m1_dout, *c2_dout, *r2_dout, *m2_dout, *c3_dout, *r3_dout, *c4_dout, *r4_dout, *c5_dout, *r5_dout, *m5_dout;
-    float *c6_dout, *r6_dout, *m6_dout, *c7_dout, *r7_dout, *c8_dout, *r8_dout, *c9_dout; //conv douts not necessary as data grads are stored in their class itself
- 
+    float *grad_data, *r1_dout, *m1_dout, *r2_dout, *m2_dout, *r3_dout, *r4_dout, *r5_dout, *m5_dout;
+    float *r6_dout, *m6_dout, *r7_dout, *r8_dout, *s9_dout; //conv douts not necessary as data grads are stored in their class itself
+
     cudaMalloc(&data, sizeof(float) * input_size);
-        cudaMalloc(&grad_data, sizeof(float) * c9.output_size);
+    cudaMalloc(&grad_data, sizeof(float) * s9.output_size);
     cudaMalloc(&c1_out, sizeof(float) * c1.output_size);
     cudaMalloc(&r1_out, sizeof(float) * r1.output_size);
     cudaMalloc(&m1_out, sizeof(float) * m1.output_size);
@@ -213,18 +242,47 @@ int main()
         cudaMalloc(&r8_dout, sizeof(float) * r8.input_size);
  
     cudaMalloc(&c9_out, sizeof(float) * c9.output_size);
+    cudaMalloc(&s9_out, sizeof(float) * s9.output_size);
+    cudaMalloc(&s9_dout, sizeof(float) * s9.input_size);
+
+    cudaMalloc(&mask, sizeof(float) * s9.output_size);
+    cudaMalloc(&target, sizeof(float) * s9.output_size);
  
-    printf("Output m1 shape = %d, %d, %d, %d\n", batch_size, m1.out_channels, m1.out_height, m1.out_width);
-    printf("Output m2 shape = %d, %d, %d, %d\n", batch_size, m2.out_channels, m2.out_height, m2.out_width);
-    printf("Output m5 shape = %d, %d, %d, %d\n", batch_size, m5.out_channels, m5.out_height, m5.out_width);
-    printf("Output c6 shape = %d, %d, %d, %d\n", batch_size, c6.out_channels, c6.out_height, c6.out_width);
-    printf("Output m6 shape = %d, %d, %d, %d\n", batch_size, m6.out_channels, m6.out_height, m6.out_width);
-    printf("Output c9 shape = %d, %d, %d, %d\n", batch_size, c9.out_channels, c9.out_height, c9.out_width);
- 
+    // printf("Output m1 shape = %d, %d, %d, %d\n", batch_size, m1.out_channels, m1.out_height, m1.out_width);
+    // printf("Output m2 shape = %d, %d, %d, %d\n", batch_size, m2.out_channels, m2.out_height, m2.out_width);
+    // printf("Output m5 shape = %d, %d, %d, %d\n", batch_size, m5.out_channels, m5.out_height, m5.out_width);
+    // printf("Output c6 shape = %d, %d, %d, %d\n", batch_size, c6.out_channels, c6.out_height, c6.out_width);
+    // printf("Output m6 shape = %d, %d, %d, %d\n", batch_size, m6.out_channels, m6.out_height, m6.out_width);
+    // printf("Output c9 shape = %d, %d, %d, %d\n", batch_size, c9.out_channels, c9.out_height, c9.out_width);
+    
     /**** Training Loop will start from here ****/
+    for(int iter = 0;iter < ITERS;iter++) {
+    printf("Iteration : %d\n", iter);
+    /* Final Input Output on CPU */
+    // Filenames
+    int image_id = (iter%num_images) + 1;
+    string im_id = to_string(image_id);
+    string filename = "../data/standard/images/resized_" + im_id + ".png";
+    string maskname = "../data/standard/targets/mask_resized_" + im_id + ".txt";
+    string targetname = "../data/standard/targets/target_resized_" + im_id + ".txt";
+    // float *cpu_data = (float *)malloc(sizeof(float) * input_size);
+    // std::cout << "\n" << filename << "\n" << maskname << "\n" << targetname << "\n\n";
+    float *cpu_data = get_img(filename); // Input image
+    float *cpu_mask = get_float_array(maskname);
+    float *cpu_target = get_float_array(targetname);
+
+    // for(int i=0; i<input_size; i++)
+    //     cpu_data[i] = 255.0;
+    float *cpu_out = (float *)malloc(sizeof(float) * c9.output_size);
+    
+    // float *grad_data_cpu = (float *)malloc(sizeof(float) * s9.output_size); //Upstream derivative of NxCx13x13 from Loss calculations
+    // for(int i=0; i<s9.output_size; i++)
+    //     grad_data_cpu[i] = 100.0;
+
     /* Forward Propagation */
- 
     checkCudaErrors(cudaMemcpyAsync(data, cpu_data, sizeof(float) * input_size,  cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpyAsync(mask, cpu_mask, sizeof(float) * s9.output_size,  cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpyAsync(target, cpu_target, sizeof(float) * s9.output_size,  cudaMemcpyHostToDevice));
     c1.forward(data, c1_out);
     r1.forward(c1_out, r1_out);
     m1.forward(r1_out, m1_out);
@@ -248,20 +306,26 @@ int main()
     c8.forward(r7_out, c8_out);
     r8.forward(c8_out, r8_out);
     c9.forward(r8_out, c9_out);
-    checkCudaErrors(cudaMemcpy(cpu_out, c9_out, sizeof(float) * c9.output_size, cudaMemcpyDeviceToHost));
- 
-    for(int i=0; i<c9.output_size; i++)
-        printf("%.2f ", cpu_out[i]);
-    printf("\n");
+    s9.forward(c9_out, s9_out);
+    checkCudaErrors(cudaMemcpy(cpu_out, s9_out, sizeof(float) * s9.output_size, cudaMemcpyDeviceToHost));
+    
+    // printf("Forward Pass Done!\n\n\n");
+
+    // for(int i=0; i<s9.output_size; i++)
+    //     printf("%.2f ", cpu_out[i]);
+    // printf("\n");
     /* Calculate Loss using the final NxCx13x13 shaped cpu_out tensor */
     //
     //                       TO BE WRITTEN                                                               
- 
+    MSELossBackprop<<<RoundUp(batch_size, BW), BW>>>(grad_data, s9_out, target, mask, batch_size);
+    float loss = MSELoss(cpu_out, cpu_target, cpu_mask);
 
-    /* Backward Propagation from c9 layer, assuming NxCx13x13 shaped upstream gradient available */
-    checkCudaErrors(cudaMemcpyAsync(grad_data, grad_data_cpu, sizeof(float) * c9.output_size,  cudaMemcpyHostToDevice));
+    printf("Loss Value : %f\n", loss);
 
-    c9.backward(grad_data, c9.input_descriptor, r8_out);
+    /* Backward Propagation from s9 layer, assuming NxCx13x13 shaped upstream gradient available */
+    // checkCudaErrors(cudaMemcpyAsync(grad_data, grad_data_cpu, sizeof(float) * s9.output_size,  cudaMemcpyHostToDevice));
+    s9.backward(grad_data, s9_dout);
+    c9.backward(s9_dout, c9.input_descriptor, r8_out);
     
     r8.backward(c9.grad_data, r8_dout);
     c8.backward(r8_dout, c8.input_descriptor, r7_out);
@@ -295,24 +359,26 @@ int main()
     float *grad_kernel = (float *)malloc(sizeof(float) * t);
     checkCudaErrors(cudaMemcpy(grad_kernel, c1.grad_kernel, sizeof(float) * t, cudaMemcpyDeviceToHost));
 
-    std::cout<<"Printing grad_kernels . . .\n";
-     for(int i = 0;i < t;i++)
-       std::cout << grad_kernel[i] << " ";
-     std::cout << std::endl;
+    // std::cout<<"Printing grad_kernels . . .\n";
+    //  for(int i = 0;i < t;i++)
+    //    std::cout << grad_kernel[i] << " ";
+    //  std::cout << std::endl;
 
     t = c1.out_channels;
     float *grad_bias = (float *)malloc(sizeof(float) * t);
     checkCudaErrors(cudaMemcpy(grad_bias, c1.grad_bias, sizeof(float) * t, cudaMemcpyDeviceToHost));
 
-    std::cout<<"Printing grad_bias . . .\n";
-     for(int i = 0;i < t;i++)
-       std::cout << grad_bias[i] << " ";
-     std::cout << std::endl;
+    // printf("Backward Pass Done!\n\n\n");
+
+    // std::cout<<"Printing grad_bias . . .\n";
+    //  for(int i = 0;i < t;i++)
+    //    std::cout << grad_bias[i] << " ";
+    //  std::cout << std::endl;
  
-    std::cout<<"Printing kernel of c1 . . .\n";
-     for(int i = 0;i < c1.cpu_param_kernel.size();i++)
-       std::cout << c1.cpu_param_kernel[i] << " ";
-     std::cout << std::endl;
+    // std::cout<<"Printing kernel of c1 . . .\n";
+    //  for(int i = 0;i < c1.cpu_param_kernel.size();i++)
+    //    std::cout << c1.cpu_param_kernel[i] << " ";
+    //  std::cout << std::endl;
  
 
  
@@ -328,17 +394,25 @@ int main()
     c1.updateWeights(learning_rate);
  
     //Check if kernel weights are getting updated
-    t = c1.in_channels * c1.kernel_size * c1.kernel_size * c1.out_channels;
-    float *kernel = (float *)malloc(sizeof(float) * t);
-    checkCudaErrors(cudaMemcpy(kernel, c1.param_kernel, sizeof(float) * t, cudaMemcpyDeviceToHost));
-    std::cout<<"Printing kernel of c1 after update. . .\n";
-     for(int i = 0;i < t; i++)
-       std::cout << kernel[i] << " ";
-     std::cout << std::endl;
- 
+    // t = c1.in_channels * c1.kernel_size * c1.kernel_size * c1.out_channels;
+    // float *kernel = (float *)malloc(sizeof(float) * t);
+    // checkCudaErrors(cudaMemcpy(kernel, c1.param_kernel, sizeof(float) * t, cudaMemcpyDeviceToHost));
+    // std::cout<<"Printing kernel of c1 after update. . .\n";
+    //  for(int i = 0;i < t; i++)
+    //    std::cout << kernel[i] << " ";
+    //  std::cout << std::endl;
+    
+    free(cpu_data);
+    free(cpu_target);
+    free(cpu_mask);
     /* Training Loop Ends Here! */
  
     /* Save trained weights */
- 
+    }
+
+    printf("Done\n\n\n");
+    checkCudaErrors(cublasDestroy(cublas));
+    checkCUDNN(cudnnDestroy(cudnn));
+
     return 0;
 }

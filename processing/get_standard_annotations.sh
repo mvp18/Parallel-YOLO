@@ -2,8 +2,9 @@
 
 
 i=1
-rm -rf NewAnnotations
-mkdir -p NewAnnotations
+cwd=$(pwd)
+rm -rf $cwd/../data/standard/Annotations
+mkdir -p $cwd/../data/standard/Annotations
 for file in ../sample/labels/*
 do
 
@@ -27,8 +28,8 @@ do
     ( [ -s tmp1 ] && [ -s tmp2 ] && [ -s tmp3 ] && [ -s tmp4 ] && [ -s tmp5 ] )   || echo "Error in $i case";
     ( [ -s tmp1 ] && [ -s tmp2 ] && [ -s tmp3 ] && [ -s tmp4 ] && [ -s tmp5 ] )   || break;
 
-    echo $objectnum > NewAnnotations/resized_$i.txt
-    paste -d " " tmp1 tmp6 tmp7 tmp8 tmp9  >> NewAnnotations/resized_$i.txt
+    echo $objectnum > $cwd/../data/standard/Annotations/resized_$i.txt
+    paste -d " " tmp1 tmp6 tmp7 tmp8 tmp9  >> $cwd/../data/standard/Annotations/resized_$i.txt
     echo "Done $i files"
     i=$(($i+1))
     # if [ $i -eq 100 ]; then

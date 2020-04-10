@@ -15,6 +15,18 @@ To ensure all layers are compiled successfully and execute successfully, run the
 bash run_tests.sh
 ```
 
+Train Model
+==========
+
+```bash
+bash create_standard_data.sh
+mkdir build
+cd build
+cmake ..
+make
+./train
+```
+
 Compilation
 ===========
 
