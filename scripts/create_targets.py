@@ -128,11 +128,11 @@ def create_data(num_classes, obj2idx, idx2obj):
 			target_dict[i_]['gt_w'] = (xmax - xmin)/(downscale_factor)
 			target_dict[i_]['gt_h'] = (ymax - ymin)/(downscale_factor)
 
-		targets = np.zeros((batch_size, feature_map_size[0], feature_map_size[0], num_anchors, 5 + num_classes))
-		masks = np.zeros((batch_size, feature_map_size[0], feature_map_size[0], num_anchors, 5 + num_classes))
+		targets = np.zeros((batch_size,  num_anchors, 5 + num_classes, feature_map_size[0], feature_map_size[0]))
+		masks = np.zeros((batch_size,  num_anchors, 5 + num_classes, feature_map_size[0], feature_map_size[0]))
 
 		# anchor2idx = {anchors[i]:i for i in range(num_anchors)}
-		masks[:, :, :, :, 0] = 1 # To account for confidence predictions
+		masks[:, :, 0, :, :] = 1 # To account for confidence predictions
 
 		for i in range(num_objects):
 			x = target_dict[i]['grid_x']
@@ -153,9 +153,9 @@ def create_data(num_classes, obj2idx, idx2obj):
 			target_h = gt_h/(gt_h + anchor_h)
 			target_w = gt_w/(gt_w + anchor_w)
 
-			masks[0, y, x, anchor_id, :] = 1
-			targets[0, y, x, anchor_id, :5] = [1.0, target_x, target_y, target_h, target_w]
-			targets[0, y, x, anchor_id, 5 + label_id] = 1
+			masks[0, anchor_id, :, y, x] = 1
+			targets[0, anchor_id, :5, y, x] = [1.0, target_x, target_y, target_h, target_w]
+			targets[0, anchor_id, 5 + label_id, y, x] = 1
 
 		# masks and targets need to be written to a file
 		np.savetxt(base_path + '../data/' + mode + '/targets' + '/mask_' + filename, masks.ravel())
