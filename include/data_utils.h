@@ -76,7 +76,14 @@ float* get_float_array(string filename_) {
     
 	float result;
 	float n;
-	while(result = fscanf(in_file, "%f", &n) != EOF) arr.push_back(result);
+	float sum = 0.0;
+	while(result = fscanf(in_file, "%f", &n) != EOF) {
+		arr.push_back(n);
+		sum += n;
+		// printf("%f\n", result);
+	}
+
+	printf("%f Sum of read array, %d\n", sum, arr.size());
 
 	float *out = (float *)malloc(sizeof(float) * arr.size());
 	for(int i = 0;i < arr.size();i++) out[i] = arr[i];
