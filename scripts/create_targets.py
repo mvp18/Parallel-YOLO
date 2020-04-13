@@ -116,6 +116,8 @@ def create_data(num_classes, obj2idx, idx2obj):
 								matching_anchor['anchor'] = anchor
 								matching_anchor['anchor_id'] = ai
 
+								print("Grid : {}, {}".format(grid_x, grid_y))
+
 			target_dict[i_] = {}
 			target_dict[i_]['label'] = label
 			target_dict[i_]['fw'] = matching_anchor['fw']
@@ -132,8 +134,8 @@ def create_data(num_classes, obj2idx, idx2obj):
 		masks = np.zeros((batch_size,  num_anchors, 5 + num_classes, feature_map_size[0], feature_map_size[0]))
 
 		# anchor2idx = {anchors[i]:i for i in range(num_anchors)}
-		masks[:, :, 0, :, :] = 1 # To account for confidence predictions
-
+		masks[:, :, 0, :, :] = -1 # To account for confidence predictions
+		
 		for i in range(num_objects):
 			x = target_dict[i]['grid_x']
 			y = target_dict[i]['grid_y']
@@ -141,9 +143,14 @@ def create_data(num_classes, obj2idx, idx2obj):
 			gt_y = target_dict[i]['gt_y']
 			gt_w = target_dict[i]['gt_w']
 			gt_h = target_dict[i]['gt_h']
+
+			print(gt_x)
+			print(gt_y)
 			anchor_id = target_dict[i]['anchor_id']
 			label_id = obj2idx[target_dict[i]['label']]
 
+			print(anchor_id)
+			print(label_id)
 			downscale_factor = H/feature_map_size[0]
 			anchor_h = anchor[0]/downscale_factor
 			anchor_w = anchor[1]/downscale_factor
@@ -153,6 +160,14 @@ def create_data(num_classes, obj2idx, idx2obj):
 			target_h = gt_h/(gt_h + anchor_h)
 			target_w = gt_w/(gt_w + anchor_w)
 
+			print(target_x)
+			print(target_y)
+			print(target_h)
+			print(target_w)
+			print(x)
+			print(y)
+
+			print("---------------")
 			masks[0, anchor_id, :, y, x] = 1
 			targets[0, anchor_id, :5, y, x] = [1.0, target_x, target_y, target_h, target_w]
 			targets[0, anchor_id, 5 + label_id, y, x] = 1
