@@ -109,7 +109,7 @@ __global__ void MSELossBackprop(float *grad_data, float *output, float *target, 
     if(mask[idx] == -1.0)
         grad_data[idx] =  0.05 * (output[idx] - target[idx]);
     else if(mask[idx] == 1.0)
-        grad_data[idx] = 5.0 * (output[idx] - target[idx]);
+        grad_data[idx] = 5.0* (output[idx] - target[idx]);
     else
         grad_data[idx] = 0.0;
 }
@@ -138,11 +138,11 @@ int main()
     input_height = input_width = 416;
     in_channels = 3;
     batch_size = 1;
-    num_classes = 15;
+    num_classes = 1;
     num_anchors = 5;
-    learning_rate = -0.001;
+    learning_rate = -0.0001;
     num_images = 1;
-    epochs = 300;
+    epochs = 10000;
     ITERS = epochs * num_images;
     SAVE_FREQUENCY = 50;
 
@@ -275,6 +275,7 @@ int main()
     // float *cpu_data = (float *)malloc(sizeof(float) * input_size);
     // std::cout << "\n" << filename << "\n" << maskname << "\n" << targetname << "\n\n";
     float *cpu_data = get_img(filename); // Input image
+    printf("Mask\n");
     float *cpu_mask = get_float_array(maskname);
     float *cpu_target = get_float_array(targetname);
 
@@ -362,29 +363,65 @@ int main()
     r1.backward(m1_dout, r1_dout);
     c1.backward(r1_dout, c1.input_descriptor, data);
  
-    // int t = c1.in_channels * c1.kernel_size * c1.kernel_size * c1.out_channels;
-    // float *grad_kernel = (float *)malloc(sizeof(float) * t);
-    // checkCudaErrors(cudaMemcpy(grad_kernel, c1.grad_kernel, sizeof(float) * t, cudaMemcpyDeviceToHost));
+    int t;
+    t = c9.output_size;
+    float *gd = (float *)malloc(sizeof(float) * t);
+    checkCudaErrors(cudaMemcpy(gd, grad_data, sizeof(float) * t, cudaMemcpyDeviceToHost));
+    std::cout << "Printing grad data . . . \n";
+    float sum_ = 0.0;
+    for(int i = 0;i < t;i++)
+       sum_ += gd[i];
+    std::cout << sum_ << std::endl;
+     std::cout << std::endl;
 
-    // std::cout<<"Printing grad_kernels . . .\n";
-    //  for(int i = 0;i < 1;i++)
-    //    std::cout << grad_kernel[i] << "\n";
-    //  std::cout << std::endl;
+
+     std::cout << "Printing target . . . \n";
+    sum_ = 0.0;
+    for(int i = 0;i < t;i++)
+       sum_ += cpu_target[i];
+    std::cout << sum_ << std::endl;
+     std::cout << std::endl;
+
+     std::cout << "Printing mask . . . \n";
+    sum_ = 0.0;
+    for(int i = 0;i < t;i++)
+       sum_ += cpu_mask[i];
+    std::cout << sum_ << std::endl;
+     std::cout << std::endl;
+
+    t = c9.in_channels * c9.kernel_size * c9.kernel_size * c9.out_channels;
+    float *grad_kernel = (float *)malloc(sizeof(float) * t);
+    checkCudaErrors(cudaMemcpy(grad_kernel, c9.grad_kernel, sizeof(float) * t, cudaMemcpyDeviceToHost));
+
+    std::cout<<"Printing grad_kernels . . .\n";
+    sum_ = 0.0;
+     for(int i = 0;i < t;i++)
+       sum_ += grad_kernel[i];
+     std::cout << sum_ << std::endl;
+     std::cout << std::endl;
     
-    // t = c1.out_channels;
-    // float *grad_bias = (float *)malloc(sizeof(float) * t);
-    // checkCudaErrors(cudaMemcpy(grad_bias, c1.grad_bias, sizeof(float) * t, cudaMemcpyDeviceToHost));
+    t = c9.out_channels;
+    float *grad_bias = (float *)malloc(sizeof(float) * t);
+    checkCudaErrors(cudaMemcpy(grad_bias, c9.grad_bias, sizeof(float) * t, cudaMemcpyDeviceToHost));
 
     // printf("Backward Pass Done!\n\n\n");
 
-    // std::cout<<"Printing grad_bias . . .\n";
-    //  for(int i = 0;i < t;i++)
-    //    std::cout << grad_bias[i] << " ";
-    //  std::cout << std::endl;
- 
-    std::cout<<"Printing kernel of c1 . . .\n";
-     for(int i = 0;i < 1;i++)
-       std::cout << c1.cpu_param_kernel[i] << " ";
+    std::cout<<"Printing grad_bias . . .\n";
+    sum_ = 0.0;
+     for(int i = 0;i < t;i++)
+       sum_ += grad_bias[i];
+     std::cout << sum_ << std::endl;
+     std::cout << std::endl;
+    
+    t = c9.in_channels * c9.kernel_size * c9.kernel_size * c9.out_channels;
+    float *ker = (float *)malloc(sizeof(float) * t);
+    checkCudaErrors(cudaMemcpy(ker, c9.param_kernel, sizeof(float) * t, cudaMemcpyDeviceToHost));
+
+    std::cout<<"Printing kernel of c9 . . .\n";
+    sum_ = 0.0;
+     for(int i = 0;i < t;i++)
+       sum_ += ker[i];
+     std::cout << sum_ << std::endl;
      std::cout << std::endl;
  
 
