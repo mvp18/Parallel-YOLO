@@ -29,14 +29,18 @@ link_directories($ENV{CUDNN_PATH} $ENV{CUDNN_PATH}/lib $ENV{CUDNN_PATH}/lib64)
 
 cuda_add_executable(run_test test/run_tests.cu include/convolution.h include/max_pool.h include/relu.h include/softmax.h include/sigmoid.h)
 cuda_add_executable(train src/model.cu include/convolution.h include/max_pool.h include/relu.h include/softmax.h include/sigmoid.h)
+cuda_add_executable(eval src/test.cu include/convolution.h include/max_pool.h include/relu.h include/softmax.h include/sigmoid.h)
 
 cuda_add_cublas_to_target(run_test)
 cuda_add_cublas_to_target(train)
+cuda_add_cublas_to_target(eval)
 
 if(USE_GFLAGS)
   target_link_libraries(run_test gflags cudnn ${PNG_LIBRARY})
   target_link_libraries(train gflags cudnn ${PNG_LIBRARY})
+  target_link_libraries(eval gflags cudnn ${PNG_LIBRARY})
 else()
   target_link_libraries(run_test cudnn ${PNG_LIBRARY})
   target_link_libraries(train cudnn ${PNG_LIBRARY})
+  target_link_libraries(eval cudnn ${PNG_LIBRARY})
 endif()

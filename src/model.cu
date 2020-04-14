@@ -109,7 +109,7 @@ __global__ void MSELossBackprop(float *grad_data, float *output, float *target, 
     if(mask[idx] == -1.0)
         grad_data[idx] =  0.05 * (output[idx] - target[idx]);
     else if(mask[idx] == 1.0)
-        grad_data[idx] = 5.0* (output[idx] - target[idx]);
+        grad_data[idx] = 5.0 * (output[idx] - target[idx]);
     else
         grad_data[idx] = 0.0;
 }
@@ -140,9 +140,9 @@ int main()
     batch_size = 1;
     num_classes = 1;
     num_anchors = 5;
-    learning_rate = -0.0001;
+    learning_rate = -0.01;
     num_images = 1;
-    epochs = 10000;
+    epochs = 5000;
     ITERS = epochs * num_images;
     SAVE_FREQUENCY = 50;
 
@@ -262,6 +262,18 @@ int main()
     // printf("Output m6 shape = %d, %d, %d, %d\n", batch_size, m6.out_channels, m6.out_height, m6.out_width);
     // printf("Output c9 shape = %d, %d, %d, %d\n", batch_size, c9.out_channels, c9.out_height, c9.out_width);
     
+    /* Load Weights */
+    // string save_path = "../weights/";
+    // c9.load_params(str_to_char_arr(save_path + + "9"));
+    // c8.load_params(str_to_char_arr(save_path + + "8"));
+    // c7.load_params(str_to_char_arr(save_path + + "7"));
+    // c6.load_params(str_to_char_arr(save_path + + "6"));
+    // c5.load_params(str_to_char_arr(save_path + + "5"));
+    // c4.load_params(str_to_char_arr(save_path + + "4"));
+    // c3.load_params(str_to_char_arr(save_path + + "3"));
+    // c2.load_params(str_to_char_arr(save_path + + "2"));
+    // c1.load_params(str_to_char_arr(save_path + + "1"));
+
     /**** Training Loop will start from here ****/
     for(int iter = 0;iter < ITERS;iter++) {
     printf("Iteration : %d\n", iter);

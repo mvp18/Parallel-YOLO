@@ -327,8 +327,9 @@ class Conv
 
         }
 
-        void updateWeights(float learning_rate) 
+        void updateWeights(float learning_rate_) 
         {
+            float learning_rate = learning_rate_;
             int ks = in_channels * kernel_size * kernel_size * out_channels;
             int bs = out_channels;
             checkCudaErrors(cublasSaxpy(cublas, static_cast<int>(ks),
@@ -338,6 +339,8 @@ class Conv
         }
 
         void save_params(const char* fileprefix) {
+          checkCudaErrors(cudaMemcpy(&cpu_param_kernel[0], param_kernel, sizeof(float) * in_channels * kernel_size * kernel_size * out_channels, cudaMemcpyDeviceToHost));
+          checkCudaErrors(cudaMemcpy(&cpu_param_bias[0], param_bias, sizeof(float) * out_channels, cudaMemcpyDeviceToHost));
 
           // get full filenames from the file prefix provided
           std::string param_kernel_file = std::string(fileprefix) + ".bin";
@@ -386,8 +389,9 @@ class Conv
             }
             res = fread(&cpu_param_bias[0], sizeof(float), out_channels, fp);
             fclose(fp);
-        
+
+            checkCudaErrors(cudaMemcpyAsync(param_kernel, &cpu_param_kernel[0], sizeof(float) * in_channels * kernel_size * kernel_size * out_channels,  cudaMemcpyHostToDevice));
+            checkCudaErrors(cudaMemcpy(param_bias, &cpu_param_bias[0], sizeof(float) * out_channels, cudaMemcpyHostToDevice));
             return true;
-        
         }
 };

@@ -105,9 +105,9 @@ int main()
     input_height = input_width = 416;
     in_channels = 3;
     batch_size = 1;
-    num_classes = 15;
+    num_classes = 1;
     num_anchors = 5;
-    num_images = 12;
+    num_images = 1;
     epochs = 1;
     ITERS = epochs * num_images;
 

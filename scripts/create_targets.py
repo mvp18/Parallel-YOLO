@@ -117,7 +117,7 @@ def create_data(num_classes, obj2idx, idx2obj):
 								matching_anchor['anchor_id'] = ai
 
 								print("Grid : {}, {}".format(grid_x, grid_y))
-
+			
 			target_dict[i_] = {}
 			target_dict[i_]['label'] = label
 			target_dict[i_]['fw'] = matching_anchor['fw']
@@ -135,7 +135,7 @@ def create_data(num_classes, obj2idx, idx2obj):
 
 		# anchor2idx = {anchors[i]:i for i in range(num_anchors)}
 		masks[:, :, 0, :, :] = -1 # To account for confidence predictions
-		
+
 		for i in range(num_objects):
 			x = target_dict[i]['grid_x']
 			y = target_dict[i]['grid_y']
