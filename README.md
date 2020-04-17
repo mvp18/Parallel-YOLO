@@ -1,13 +1,5 @@
 # Parallel-YOLO
 
-Task Left
-=========
-
-- Build a small model and train on Mnist (for testing purposes)
-- Build the tiny-yolo architecture
-- And much more...
-
-
 Train Model
 ==========
 To compile with and run with CMake, run the following commands:
