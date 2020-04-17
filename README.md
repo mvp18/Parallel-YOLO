@@ -14,6 +14,7 @@ To compile with and run with CMake, run the following commands:
 
 ```bash
 bash create_standard_data.sh
+mkdir weights
 mkdir build
 cd build
 cmake ..
