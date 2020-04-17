@@ -138,11 +138,11 @@ int main()
     input_height = input_width = 416;
     in_channels = 3;
     batch_size = 1;
-    num_classes = 1;
+    num_classes = 15;
     num_anchors = 5;
-    learning_rate = -0.01;
-    num_images = 1;
-    epochs = 5000;
+    learning_rate = -0.001;
+    num_images = 12;
+    epochs = 10000;
     ITERS = epochs * num_images;
     SAVE_FREQUENCY = 50;
 
