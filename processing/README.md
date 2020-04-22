@@ -1,4 +1,4 @@
-# pText_script.sh:
+# get_standard_annotations.sh:
 
 The initial data file has the following format:
 
@@ -61,12 +61,18 @@ ObjectName xmin ymin xmax ymax.
 These version of `xmin`, `xmax`, `ymin`, `ymax` are scaled. The lower coordinates are rounded down and upper coordinates are rounded up.
 
 # combineScript.sh
-This script is to be run after running `pText_script.sh`. This takes the data of 4 images and combines them into one by down scaling the image data. This script follows the following pattern for bounding box arrangement:
+This script is to be run after running `get_standard_annotations.sh`. This takes the data of 4 images and combines them into one by down scaling the image data. This script follows the following pattern for bounding box arrangement:
 
-4k + 1 image on top left, 4k + 2 image on top right, 4k + 3 image on bottom left and 4k + 4 image on bottom right.
+4k + 1 image on top left, 4k + 2 imageh on top right, 4k + 3 image on bottom left and 4k + 4 image on bottom right.
+
+# resize.py
+This script resizes the input image to (416,416) pixel size, as required by the tiny-yolo architecture used.
 
 # CombineFourImage.py
 This script is to be run after running running `resize.py`. This combines four images as mentioned above in `combineScript.sh` and writes it as `combined_(#).png`.
 
 # readFile.c
 This file has function readFile which takes as input the filename and returns a `float*` array which comprises of the scanned entries from the file.
+
+# flatten.c
+This file flattens the 2-dimensional, 3 channel input image to a one dimentional float array.
