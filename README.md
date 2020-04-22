@@ -62,6 +62,8 @@ If compiling under linux, make sure to either set the CUDNN_PATH environment var
 
 To enable gflags support, uncomment the line in CMakeLists.txt. In the Visual Studio project, define the macro USE_GFLAGS.
 
+<b> Presentation Link </b> : https://docs.google.com/presentation/d/19aTHaOBQJV-aQ_BSsfr9PoLtUurHqWZq5CV35UGhI8E/edit?usp=sharing
+
 Reference Paper
 ==============
 
