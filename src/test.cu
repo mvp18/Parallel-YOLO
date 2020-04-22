@@ -95,7 +95,7 @@ int main()
     int input_height, input_width, in_channels;
     int num_classes, num_anchors;
     int batch_size;
-    float learning_rate;
+    //float learning_rate;
     int epochs;
     int ITERS;
     int num_images;
