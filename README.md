@@ -8,6 +8,13 @@ Vision based perception systems are critical for autonomous-driving vehicle prod
 
 Instructions
 ============
+
+If compiling under linux, make sure to either set the CUDNN_PATH environment variable to the path CUDNN is installed to, or extract CUDNN to the CUDA toolkit path.
+
+To enable gflags support, uncomment the line in CMakeLists.txt. In the Visual Studio project, define the macro USE_GFLAGS.
+
+Make sure you have virtualenv installed
+
 To compile with and run with CMake, run the following commands:
 
 ```bash
@@ -57,10 +64,6 @@ python infer_targets.py
 ```
 
 The resources at hand currently are insufficient for training this architecture. So, the evaluation file may not give expected results.
-
-If compiling under linux, make sure to either set the CUDNN_PATH environment variable to the path CUDNN is installed to, or extract CUDNN to the CUDA toolkit path.
-
-To enable gflags support, uncomment the line in CMakeLists.txt. In the Visual Studio project, define the macro USE_GFLAGS.
 
 <b> Presentation Link </b> : https://docs.google.com/presentation/d/19aTHaOBQJV-aQ_BSsfr9PoLtUurHqWZq5CV35UGhI8E/edit?usp=sharing
 
