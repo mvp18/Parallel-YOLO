@@ -67,4 +67,4 @@ To enable gflags support, uncomment the line in CMakeLists.txt. In the Visual St
 Reference Paper
 ==============
 
-Re-Thinking CNN Frameworks for Time-Sensitive Autonomous-Driving Applications: Addressing an Industrial Challenge
+[Re-Thinking CNN Frameworks for Time-Sensitive Autonomous-Driving Applications: Addressing an Industrial Challenge](https://www.cs.unc.edu/~anderson/papers/rtas19.pdf)
