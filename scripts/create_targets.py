@@ -1,3 +1,7 @@
+"""
+Run this script to create targets for the dataset and write them to a text file
+That file can then be easily parsed in C++
+"""
 import os
 import cv2
 import numpy as np

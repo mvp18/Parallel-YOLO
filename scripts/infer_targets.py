@@ -1,3 +1,7 @@
+"""
+Run this script to print the predictions output by the network
+This is to be run after running `../src/test.cu`
+"""
 import os
 import cv2
 import numpy as np

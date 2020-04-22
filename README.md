@@ -15,19 +15,46 @@ bash main.sh
 cd build
 ```
 
-To check the working of building blocks of the model,
-```bash
-./run_test
+This will create targets in a C++ readable format, create evaluation targets and compile the code.
+
+To train the model, modify the configuration parameters in `train.cu`
+```
+input_height = input_width = 416;
+in_channels = 3;
+batch_size = 1;
+num_classes = 15;
+num_anchors = 5;
+learning_rate = -0.001;
+num_images = 12;
+epochs = 10000;
+ITERS = epochs * num_images;
+SAVE_FREQUENCY = 50;
 ```
 
-To train the model,
+Now run the following
 ```bash
+cd build
 ./train
 ```
 
-To evaluate the model,
+To evaluate the model, place the evaluation images in `$ROOT/eval/images/`, create an empty directory as `$ROOT/eval/predictions` and modify the configuration parameters in `test.cu`
+```
+input_height = input_width = 416;
+in_channels = 3;
+batch_size = 1;
+num_classes = 1;
+num_anchors = 5;
+num_images = 1;
+```
+
+Now run the following from `$ROOT/build`
 ```bash
 ./eval
+```
+
+To see predictions on the terminal, run the following from `$ROOT/scripts/`
+```bash
+python infer_targets.py
 ```
 
 The resources at hand currently are insufficient for training this architecture. So, the evaluation file may not give expected results.
