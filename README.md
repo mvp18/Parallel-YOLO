@@ -13,7 +13,7 @@ If compiling under linux, make sure to either set the CUDNN_PATH environment var
 
 To enable gflags support, uncomment the line in CMakeLists.txt. In the Visual Studio project, define the macro USE_GFLAGS.
 
-Make sure you have virtualenv installed
+Make sure you have all the python dependencies installed listed in `requirements.txt`.
 
 To compile with and run with CMake, run the following commands:
 
