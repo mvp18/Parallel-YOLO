@@ -15,6 +15,8 @@ To enable gflags support, uncomment the line in CMakeLists.txt. In the Visual St
 
 Make sure you have all the python dependencies installed listed in `requirements.txt`.
 
+The major dependencies are cuDNN, CUDA, OpenCV and Numpy.
+
 To compile with and run with CMake, run the following commands:
 
 ```bash
@@ -64,6 +66,7 @@ python infer_targets.py
 ```
 
 The resources at hand currently are insufficient for training this architecture. So, the evaluation file may not give expected results.
+
 
 <b> Presentation Link </b> : https://docs.google.com/presentation/d/19aTHaOBQJV-aQ_BSsfr9PoLtUurHqWZq5CV35UGhI8E/edit?usp=sharing
 
