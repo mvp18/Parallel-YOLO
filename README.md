@@ -12,7 +12,6 @@ To compile with and run with CMake, run the following commands:
 
 ```bash
 bash main.sh
-cd build
 ```
 
 This will create targets in a C++ readable format, create evaluation targets and compile the code.
