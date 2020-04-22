@@ -1,6 +1,8 @@
 class Sigmoid
 {
+    // Sigmoid Layer class
     public:
+        // Declare public variables
         const float alpha = 1.0f;
         const float beta = 0.0f;
         
@@ -12,18 +14,18 @@ class Sigmoid
         cudnnHandle_t cudnn;
         cublasHandle_t cublas;
  
-        /*** These variables will be on GPU as cache for backward pass ***/
-        float *din; //Input to Sigmoid layer
-        float *dot;  //Output of Sigmoid layer
+        // These variables will be on GPU as cache for backward pass 
+        float *din;   //Input to Sigmoid layer
+        float *dot;   //Output of Sigmoid layer
  
-        /*** These variables will be on CPU ***/
+        // These variables will be on CPU
         int input_size, output_size;
         int input_height, out_height;
         int in_channels, out_channels;
         int input_width, out_width;
         int gpu_id;
-        float *din_cpu; //Cache for backprop
-        float *dot_cpu; //Cache for backprop
+        float *din_cpu;  //Cache for backprop
+        float *dot_cpu;  //Cache for backprop
  
         Sigmoid(int _in_channels, int _out_channels, cudnnHandle_t _cudnn, cublasHandle_t _cublas, int batch_size, int height, int width, int _gpu_id,
              cudnnTensorDescriptor_t& _input_descriptor, cudnnTensorDescriptor_t& _output_descriptor, int init_io_desc)
@@ -71,7 +73,7 @@ class Sigmoid
                                          CUDNN_NOT_PROPAGATE_NAN,
                                          0.0)); //Clip value for Clipped Sigmoid, Not of any use here
          
-            /*** Allocate memory to GPU and CPU ***/
+            // Allocate memory to GPU and CPU
             input_size = batch_size * in_channels * height * width;
             output_size = input_size;
          
@@ -82,6 +84,7 @@ class Sigmoid
             checkCudaErrors(cudaMalloc(&dot, sizeof(float)*output_size));
         }
  
+        // Destructor for de-allocating memory
         ~Sigmoid()
         {
             checkCUDNN(cudnnDestroyTensorDescriptor(input_descriptor));
@@ -91,6 +94,7 @@ class Sigmoid
  
         void forward(float *d_input, float *d_output)
         {
+            // Performs forward pass for sigmoid layer
             checkCUDNN(cudnnActivationForward(
                 cudnn,
                 activation_descriptor,
@@ -110,8 +114,9 @@ class Sigmoid
             checkCudaErrors(cudaMemcpy(din, din_cpu, sizeof(float) * output_size,  cudaMemcpyHostToDevice));
         }
  
-        void backward(float *grad_above, float *grad_out) //
+        void backward(float *grad_above, float *grad_out) 
         {
+            // Performs backward pass for sigmoid layer
             checkCUDNN(cudnnActivationBackward(
                 cudnn,
                 activation_descriptor,
@@ -121,7 +126,7 @@ class Sigmoid
                 output_descriptor,
                 grad_above,
                 input_descriptor,
-                din, //Not sure why this parameter is required!
+                din,
                 &beta,
                 input_descriptor,
                 grad_out

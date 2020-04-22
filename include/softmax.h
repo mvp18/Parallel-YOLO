@@ -1,13 +1,13 @@
 class Softmax 
-/*Expected Input Tensor Shape [N,1,1,W] in NCHW format in constructor
-N = BATCH_SIZE, W = flattened vector length
-Output is of same shape out = softmax(inp) 
-backprop expects dL/dout (grad_in) and returns dL/dinp
-L = any loss computed from output of softmax eg cross entropy 
-Note that we need to have another layer to compute loss if we like to calculate*/
+    /*Expected Input Tensor Shape [N,1,1,W] in NCHW format in constructor
+    N = BATCH_SIZE, W = flattened vector length
+    Output is of same shape out = softmax(inp) 
+    backprop expects dL/dout (grad_in) and returns dL/dinp
+    L = any loss computed from output of softmax eg cross entropy 
+    Note that we need to have another layer to compute loss if we like to calculate*/
 {
     public:
- 
+        // Declare public variables
         const float alpha = 1.0f;
         const float beta = 0.0f;
         
@@ -17,10 +17,10 @@ Note that we need to have another layer to compute loss if we like to calculate*
         cudnnHandle_t cudnn;
         cublasHandle_t cublas;
  
-        /*** These variables will be on GPU as cache for backward pass ***/
+        // These variables will be on GPU as cache for backward pass 
         float *dot;  //Output of softmax i.e., dot = softmax(d_input) in forward, necessary to cache for backward
  
-        /*** These variables will be on CPU ***/
+        // These variables will be on CPU
         int input_size, output_size;
         int out_height, out_width;
         int in_channels, out_channels;
@@ -59,7 +59,7 @@ Note that we need to have another layer to compute loss if we like to calculate*
                                                       out_height,
                                                       out_width));
             
-            /*** Allocate memory to GPU placeholders ***/
+            // Allocate memory to GPU placeholders
             input_size = batch_size * in_channels * height * width;
             output_size = input_size; //output_size means output of softmax, not the scalar loss
          
@@ -69,6 +69,7 @@ Note that we need to have another layer to compute loss if we like to calculate*
  
         void forward(float *d_input, float *d_output)
         {
+            // Performs forward pass for softmax layer
             checkCUDNN(cudnnSoftmaxForward(
                 cudnn,
                 CUDNN_SOFTMAX_ACCURATE,
@@ -78,7 +79,7 @@ Note that we need to have another layer to compute loss if we like to calculate*
                 d_input,
                 &beta,
                 output_descriptor,
-                d_output
+                d_output    
             ));
          
             //Store the output of softmax for backprop
@@ -88,6 +89,7 @@ Note that we need to have another layer to compute loss if we like to calculate*
  
         void backward(float *grad_above, float *grad_out)
         {
+            // Performs backward pass for softmax activation
             checkCUDNN(cudnnSoftmaxBackward(
                 cudnn,
                 CUDNN_SOFTMAX_ACCURATE,

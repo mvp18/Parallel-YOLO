@@ -1,7 +1,9 @@
 class Conv 
 {
+	/*Convolution layer class*/
+	// Declare public variables
     public:
-      // alpha and beta are scaling constants for the operations, use these default values
+      	// alpha and beta are scaling constants for the operations, use these default values
         const float alpha = 1.0f;
         const float beta = 0.0f;
 
@@ -9,9 +11,9 @@ class Conv
         cudnnTensorDescriptor_t input_descriptor;
         cudnnTensorDescriptor_t output_descriptor;
         cudnnTensorDescriptor_t bias_descriptor;
-        cudnnFilterDescriptor_t kernel_descriptor; // descriptor for the weight parameter
+        cudnnFilterDescriptor_t kernel_descriptor; 			 // descriptor for the weight parameter
         cudnnConvolutionDescriptor_t convolution_descriptor; // descriptor for the operation
-        cudnnConvolutionFwdAlgo_t convolution_algorithm; // descriptor for the algorithm to use
+        cudnnConvolutionFwdAlgo_t convolution_algorithm; 	 // descriptor for the algorithm to use
         cudnnHandle_t cudnn;
         cublasHandle_t cublas;
 
@@ -20,8 +22,9 @@ class Conv
         size_t m_workspaceSize;
 
         cudnnConvolutionBwdFilterAlgo_t convbwfalgo; // used for computing gradient with respect to weight
-        cudnnConvolutionBwdDataAlgo_t convbwdalgo; // used for computing gradient with respect to input
-        bool falgo, dalgo; // if falgo, we compute gradient with respect to filter weight parameter, if dalgo, we compute gradient with respect to input
+        cudnnConvolutionBwdDataAlgo_t convbwdalgo; 	 // used for computing gradient with respect to input
+        bool falgo, dalgo;                           // if falgo, we compute gradient with respect to filter weight 
+        											 // parameter, if dalgo, we compute gradient with respect to input
 
         /*** These variables are on GPU ***/
         // weights of the kernel and bias
@@ -48,12 +51,12 @@ class Conv
         Conv(int _in_channels, int _out_channels, int _kernel_size, int padding, int stride, cudnnHandle_t _cudnn, cublasHandle_t _cublas,
             int batch_size, int width, int height, bool use_backward_filter, bool use_backward_data, int gpu_id,
             cudnnTensorDescriptor_t& _input_descriptor, cudnnTensorDescriptor_t& _output_descriptor, int init_io_desc) {
-          /*
-        use_backward_filter : Whether to compute gradient with respect to filter weights
-        use_backward_data : Whether to compute gradient with respect to input
-        init_io_desc : If true, the 'input descriptor' is initialized from scratch else only '_input_descriptor' is used and output_descriptor is initialised from scratch
-        Note- 'output_descriptor' is always initialised from scratch
-          */
+            /*
+        	use_backward_filter : Whether to compute gradient with respect to filter weights
+        	use_backward_data : Whether to compute gradient with respect to input
+        	init_io_desc : If true, the 'input descriptor' is initialized from scratch else only '_input_descriptor' is used and output_descriptor is initialised from scratch
+        	Note- 'output_descriptor' is always initialised from scratch
+            */
             // Assign Handles
             cudnn = _cudnn;
             cublas = _cublas;
@@ -131,7 +134,7 @@ class Conv
                                                       /*computeType=*/CUDNN_DATA_FLOAT));
 
             /*** Create Convolution Algorithm Descriptors ***/
-                checkCUDNN(cudnnGetConvolutionForwardAlgorithm(cudnn,
+            checkCUDNN(cudnnGetConvolutionForwardAlgorithm(cudnn,
                                                         input_descriptor,
                                                         kernel_descriptor,
                                                         convolution_descriptor,
@@ -142,7 +145,7 @@ class Conv
 
 
             // /*** Allocating Memory To Workspace for the operations ***/
-                checkCUDNN(cudnnGetConvolutionForwardWorkspaceSize(cudnn,
+            checkCUDNN(cudnnGetConvolutionForwardWorkspaceSize(cudnn,
                                                                   input_descriptor,
                                                                   kernel_descriptor,
                                                                   convolution_descriptor,
@@ -154,7 +157,6 @@ class Conv
             // set falgo and dalgo
             falgo = use_backward_filter;
             dalgo = use_backward_data;
-            //
 
             // If backprop filter algorithm was requested
             if (falgo)
@@ -170,7 +172,7 @@ class Conv
 
             workspace = std::max(workspace, tmpsize);
 
-            // // If backprop data algorithm was requested
+            // If backprop data algorithm was requested
             if (dalgo)
             {
                     checkCUDNN(cudnnGetConvolutionBackwardDataAlgorithm(
@@ -211,7 +213,7 @@ class Conv
             checkCudaErrors(cudaMemcpyAsync(param_bias, &cpu_param_bias[0], sizeof(float) * cpu_param_bias.size(),  cudaMemcpyHostToDevice));
         }
 
-        // Desctructor for de-allocating memory
+        // Destructor for de-allocating memory
         ~Conv() 
         {
           // checkCudaErrors(cudaSetDevice(gpu_id));
@@ -265,7 +267,7 @@ class Conv
 
         void init_weights() 
         {
-          // Initialize Weights
+            // Initialize Weights
             std::random_device rd;
             std::mt19937 gen(RANDOM_SEED < 0 ? rd() : static_cast<unsigned int>(RANDOM_SEED));
 
@@ -279,6 +281,7 @@ class Conv
 
         void forward(float *d_input, float *d_output) 
         {
+        	/*Performs forward pass for convolution layer*/
             checkCUDNN(cudnnConvolutionForward(cudnn,
                                               &alpha,
                                               input_descriptor,
@@ -299,36 +302,37 @@ class Conv
 
         void backward(float *data_grad_above, cudnnTensorDescriptor_t &tensor_below, float *data_below) 
         {
-          /*
-        X : Input
-        Y : Output
-        W,b : Convolution Parameters
-        Y = WX + b
-        Y : Output of given convolution
-        
-        This calculates dW, db, dX
-        data_grad_above : dY
-        tensor_below : Descriptor of X
-        data_below : X
-          */
-              checkCUDNN(cudnnConvolutionBackwardBias(cudnn, &alpha, output_descriptor,
-                                                      data_grad_above, &beta, bias_descriptor, grad_bias)); // correct!
-             if(falgo)
-                  checkCUDNN(cudnnConvolutionBackwardFilter(cudnn, &alpha, tensor_below,
-                                                              data_below, output_descriptor, data_grad_above, convolution_descriptor,
-                                                              convbwfalgo, d_workspace, m_workspaceSize,
-                                                              &beta, kernel_descriptor, grad_kernel)); // workspace ka dekhna, baaki correct hai!
-                
-              if(dalgo)
-                  checkCUDNN(cudnnConvolutionBackwardData(cudnn, &alpha, kernel_descriptor,
-                                                            param_kernel, output_descriptor, data_grad_above, convolution_descriptor,
-                                                            convbwdalgo, d_workspace, m_workspaceSize,
-                                                            &beta, tensor_below, grad_data));
+        	/*Performs backward pass for convolution layer
+	        X : Input
+	        Y : Output
+	        W,b : Convolution Parameters
+	        Y = WX + b
+	        Y : Output of given convolution
+	        
+	        This calculates dW, db, dX
+	        data_grad_above : dY
+	        tensor_below : Descriptor of X
+	        data_below : X
+	        */
+	        checkCUDNN(cudnnConvolutionBackwardBias(cudnn, &alpha, output_descriptor,
+	                                                  data_grad_above, &beta, bias_descriptor, grad_bias)); // correct!
+	        if(falgo)
+	              checkCUDNN(cudnnConvolutionBackwardFilter(cudnn, &alpha, tensor_below,
+	                                                          data_below, output_descriptor, data_grad_above, convolution_descriptor,
+	                                                          convbwfalgo, d_workspace, m_workspaceSize,
+	                                                          &beta, kernel_descriptor, grad_kernel)); // workspace ka dekhna, baaki correct hai!
+	            
+	        if(dalgo)
+	              checkCUDNN(cudnnConvolutionBackwardData(cudnn, &alpha, kernel_descriptor,
+	                                                        param_kernel, output_descriptor, data_grad_above, convolution_descriptor,
+	                                                        convbwdalgo, d_workspace, m_workspaceSize,
+	                                                        &beta, tensor_below, grad_data));
 
         }
 
         void updateWeights(float learning_rate_) 
         {
+        	// Update weights 
             float learning_rate = learning_rate_;
             int ks = in_channels * kernel_size * kernel_size * out_channels;
             int bs = out_channels;
@@ -339,6 +343,8 @@ class Conv
         }
 
         void save_params(const char* fileprefix) {
+          //Save updated weights (both kernel weights and bias weights)
+
           checkCudaErrors(cudaMemcpy(&cpu_param_kernel[0], param_kernel, sizeof(float) * in_channels * kernel_size * kernel_size * out_channels, cudaMemcpyDeviceToHost));
           checkCudaErrors(cudaMemcpy(&cpu_param_bias[0], param_bias, sizeof(float) * out_channels, cudaMemcpyDeviceToHost));
 
@@ -367,7 +373,7 @@ class Conv
         }
 
         bool load_params(const char* fileprefix) {
-            
+            // Load saved weights 
             // get full filenames from the file prefix provided
             std::string param_kernel_file = std::string(fileprefix) + ".bin";
             std::string param_bias_file = std::string(fileprefix) + ".bias.bin";

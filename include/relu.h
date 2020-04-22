@@ -1,6 +1,9 @@
 class Relu
 {
+    // ReLu Layer class
+
     public:
+        // Declare public variables
         const float alpha = 1.0f;
         const float beta = 0.0f;
         
@@ -12,11 +15,11 @@ class Relu
         cudnnHandle_t cudnn;
         cublasHandle_t cublas;
  
-        /*** These variables will be on GPU as cache for backward pass ***/
-        float *din; //Input to ReLU layer
+        // These variables will be on GPU as cache for backward pass
+        float *din;  //Input to ReLU layer
         float *dot;  //Output of ReLU layer
  
-        /*** These variables will be on CPU ***/
+        // These variables will be on CPU 
         int input_size, output_size;
         int input_height, out_height;
         int in_channels, out_channels;
@@ -81,7 +84,8 @@ class Relu
             checkCudaErrors(cudaMalloc(&din, sizeof(float)*input_size));
             checkCudaErrors(cudaMalloc(&dot, sizeof(float)*output_size));
         }
- 
+        
+        // Destructor for de-allocating memory
         ~Relu()
         {
             checkCUDNN(cudnnDestroyTensorDescriptor(input_descriptor));
@@ -91,6 +95,7 @@ class Relu
  
         void forward(float *d_input, float *d_output)
         {
+            // Performs forward pass for relu layer
             checkCUDNN(cudnnActivationForward(
                 cudnn,
                 activation_descriptor,
@@ -112,6 +117,7 @@ class Relu
  
         void backward(float *grad_above, float *grad_out) //
         {
+            // Performs backward pass for relu layer
             checkCUDNN(cudnnActivationBackward(
                 cudnn,
                 activation_descriptor,
@@ -121,7 +127,7 @@ class Relu
                 output_descriptor,
                 grad_above,
                 input_descriptor,
-                din, //Not sure why this parameter is required!
+                din,
                 &beta,
                 input_descriptor,
                 grad_out

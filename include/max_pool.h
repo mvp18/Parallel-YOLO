@@ -1,6 +1,8 @@
 class MaxPoolLayer
 {
+    // Max Pool Layer class
     public:
+        // Declare public variables
         float alpha = 1.0f, beta = 0.0f;
         int gpu_id, input_height, input_width, input_size, out_height, out_width, output_size, out_channels;
 
@@ -20,7 +22,7 @@ class MaxPoolLayer
             gpu_id = _gpu_id;
             // checkCudaErrors(cudaSetDevice(gpu_id));
 
-            /*** Forward Propagation Descriptors ***/
+            // Forward Propagation Descriptors
             input_width = conv_out_width;
             input_height = conv_out_height;
             input_size = batch_size * conv_out_channel * input_height * input_width;
@@ -68,12 +70,11 @@ class MaxPoolLayer
             
         }
 
-        // Desctructor for de-allocating memory
+        // Destructor for de-allocating memory
         ~MaxPoolLayer() 
         {   
             // checkCudaErrors(cudaSetDevice(gpu_id));
             /* Note : Do not delete cublas and cudnn here and destroy them where the final model will be defined */
-            // checkCUDNN(cudnnDestroy(cudnnHandle)); // This line is causing a segmentation fault
             checkCUDNN(cudnnDestroyTensorDescriptor(input_descriptor));
             checkCUDNN(cudnnDestroyTensorDescriptor(poolTensor));
             checkCUDNN(cudnnDestroyPoolingDescriptor(poolDesc));
@@ -81,7 +82,7 @@ class MaxPoolLayer
 
         void forward(float* input_tensor, float* output_tensor/*, cudnnTensorDescriptor_t& _input_descriptor*/)
         {
-            // checkCudaErrors(cudaSetDevice(gpu_id));
+            //Performs forward pass for convolution layer
             checkCUDNN(cudnnPoolingForward(cudnnHandle,         //handle
                                           poolDesc,            //poolingDesc
                                           &alpha,              //alpha
@@ -94,11 +95,13 @@ class MaxPoolLayer
 
         void backward(float* input_tensor, float *input_gradient, float *output_tensor, float* output_gradient/*, cudnnTensorDescriptor_t& _input_descriptor*/)
         {
-          /* conv + relu layer 1-> max pool -> conv layer 2
-          /  input_tensor -> input from conv1
-          /  input_gradient -> gradient from conv 2
-          /  output_tensor -> output of max pool layer
-          /  output_gradient -> output gradient  */
+          /*Performs backward pass for convolution layer
+            conv + relu layer 1-> max pool -> conv layer 2
+            input_tensor -> input from conv1
+            input_gradient -> gradient from conv 2
+            output_tensor -> output of max pool layer
+            output_gradient -> output gradient  
+          */
         
             checkCUDNN(cudnnPoolingBackward(cudnnHandle,              //handle
                                             poolDesc,                 //poolingDesc
@@ -117,7 +120,7 @@ class MaxPoolLayer
         
         void update_weights()
         {
-            // No weights
+            // No weights to updates :)
             return;
         }
 };

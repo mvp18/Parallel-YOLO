@@ -1,5 +1,3 @@
-
-
 char* str_to_char_arr(string str) {
 	char *c = strcpy(new char[str.length() + 1], str.c_str());
 	return c;
