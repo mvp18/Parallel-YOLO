@@ -16,7 +16,7 @@ bash main.sh
 
 This will create targets in a C++ readable format, create evaluation targets and compile the code.
 
-To train the model, modify the configuration parameters in `train.cu`
+To train the model, modify the configuration parameters in `src/model.cu`
 ```
 input_height = input_width = 416;
 in_channels = 3;
@@ -36,7 +36,7 @@ cd build
 ./train
 ```
 
-To evaluate the model, place the evaluation images in `$ROOT/eval/images/`, create an empty directory as `$ROOT/eval/predictions` and modify the configuration parameters in `test.cu`
+To evaluate the model, place the evaluation images in `$ROOT/eval/images/`, create an empty directory as `$ROOT/eval/predictions` and modify the configuration parameters in `src/test.cu`
 ```
 input_height = input_width = 416;
 in_channels = 3;
