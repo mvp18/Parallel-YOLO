@@ -34,6 +34,41 @@
  
  void backward(float *grad_above, float *grad_out);
  ```
+
+ - Sigmoid
+ ```
+ Sigmoid(int _in_channels, int _out_channels, cudnnHandle_t _cudnn, cublasHandle_t _cublas, int batch_size, int height, int width, int _gpu_id,
+             cudnnTensorDescriptor_t& _input_descriptor, cudnnTensorDescriptor_t& _output_descriptor, int init_io_desc);
  
- ## YOLO architecture used
+ void forward(float *d_input, float *d_output);
+
+ void backward(float *grad_above, float *grad_out);
+
+ ```
+
+ - Softmax
+ ```
+ Softmax(int _in_channels, int _out_channels, cudnnHandle_t _cudnn, cublasHandle_t _cublas,
+             int batch_size, int height, int width, int _gpu_id);
+
+ void forward(float *d_input, float *d_output);
+
+ void backward(float *grad_above, float *grad_out);
+
+ ```
+
+ 
+- data_utils
+```
+char* str_to_char_arr(string str);
+
+float* get_img(string filename_);
+
+float* get_float_array(string filename_);
+```
+
+- mse
+```
+__global__ void SoftmaxLossBackprop(const float *label, int num_labels, int batch_size, float *diff);
+```
  
