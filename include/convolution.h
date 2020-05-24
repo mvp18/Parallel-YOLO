@@ -1,3 +1,26 @@
+__global__ void square(float* out, float* in, int sz) 
+{
+  
+  int id = blockIdx.x * blockDim.x + threadIdx.x;
+  if (id >= sz)
+    return;
+
+  out[id] = in[id] * in[id];
+
+}
+
+__global__ void computeMoment(float* out, float* v, float* s, int sz) 
+{
+
+  int id = blockIdx.x * blockDim.x + threadIdx.x;
+  if (id >= sz)
+    return;
+
+  out[id] = v[id] / (sqrtf(s[id]) + 10e-8);
+
+}
+
+
 class Conv 
 {
 	/*Convolution layer class*/
@@ -40,12 +63,19 @@ class Conv
         float *grad_bias;
         float *grad_data; // gradient with respect input of convolution, Note : INPUT
 
+        // square of grads for Adam's Optimization
+        float* grad_kernel_sq;
+        float* grad_bias_sq;
+
         // Momentum variables on GPU
         float* v_kernel;
         float* s_kernel;
 
         float* v_bias;
         float* s_bias;
+
+        // float* mom_kernel;
+        // float* mom_bias;
 
         /*** These variables are on CPU ***/
         std::vector<float> cpu_param_kernel;
@@ -213,6 +243,8 @@ class Conv
             checkCudaErrors(cudaMalloc(&param_bias, sizeof(float) * out_channels));
             checkCudaErrors(cudaMalloc(&grad_kernel, sizeof(float) * in_channels * kernel_size * kernel_size * out_channels));
             checkCudaErrors(cudaMalloc(&grad_bias, sizeof(float) * out_channels));
+            checkCudaErrors(cudaMalloc(&grad_kernel_sq, sizeof(float) * in_channels * kernel_size * kernel_size * out_channels));
+            checkCudaErrors(cudaMalloc(&grad_bias_sq, sizeof(float) * out_channels));
             // Gradient with respect to output has same shape as output
             checkCudaErrors(cudaMalloc(&grad_data,   sizeof(float) * batch_size * out_height * out_width * out_channels));
 
@@ -222,6 +254,9 @@ class Conv
 
             checkCudaErrors(cudaMalloc(&v_bias, sizeof(float) * out_channels));
             checkCudaErrors(cudaMalloc(&s_bias, sizeof(float) * out_channels));
+
+            // checkCudaErrors(cudaMalloc(&mom_kernel, sizeof(float) * in_channels * kernel_size * kernel_size * out_channels));
+            // checkCudaErrors(cudaMalloc(&mom_bias, sizeof(float) * out_channels));
 
             input_size = batch_size * height * width * in_channels;
             output_size = batch_size * out_height * out_width * out_channels;
@@ -355,11 +390,45 @@ class Conv
 	        */
 	        checkCUDNN(cudnnConvolutionBackwardBias(cudnn, &alpha, output_descriptor,
 	                                                  data_grad_above, &beta, bias_descriptor, grad_bias)); // correct!
-	        if(falgo)
+
+          // update the momentum variables
+
+          // update velocity
+          checkCudaErrors(cublasSscal(cublas, out_channels, &beta1, v_bias, 1));
+          checkCudaErrors(cublasSaxpy(cublas, out_channels, &one_minus_beta1, grad_bias, 1, v_bias, 1));
+
+          square<<<ceil(out_channels / 128.0f), 128>>>(grad_bias_sq, grad_bias, out_channels);
+
+          // update mean square
+          checkCudaErrors(cublasSscal(cublas, out_channels, &beta2, s_bias, 1));
+          checkCudaErrors(cublasSaxpy(cublas, out_channels, &one_minus_beta2, grad_bias_sq, 1, s_bias, 1));
+
+          // update momentum
+          computeMoment<<<ceil(out_channels / 128.0f), 128>>>(grad_bias, v_bias, s_bias, out_channels);
+
+	        if(falgo) {
 	              checkCUDNN(cudnnConvolutionBackwardFilter(cudnn, &alpha, tensor_below,
 	                                                          data_below, output_descriptor, data_grad_above, convolution_descriptor,
 	                                                          convbwfalgo, d_workspace, m_workspaceSize,
 	                                                          &beta, kernel_descriptor, grad_kernel)); // workspace ka dekhna, baaki correct hai!
+          
+                // update the momentum variables
+                int ks = in_channels * kernel_size * kernel_size * out_channels;
+
+                // update velocity
+                checkCudaErrors(cublasSscal(cublas, ks, &beta1, v_kernel, 1));
+                checkCudaErrors(cublasSaxpy(cublas, ks, &one_minus_beta1, grad_kernel, 1, v_kernel, 1));
+
+                square<<<ceil(ks / 128.0f), 128>>>(grad_kernel_sq, grad_kernel, ks);
+
+                // update mean square
+                checkCudaErrors(cublasSscal(cublas, ks, &beta2, s_kernel, 1));
+                checkCudaErrors(cublasSaxpy(cublas, ks, &one_minus_beta2, grad_kernel_sq, 1, s_kernel, 1));
+
+                // update momentum
+                computeMoment<<<ceil(out_channels / 128.0f), 128>>>(grad_kernel, v_kernel, s_kernel, ks);
+          
+          }
 	            
 	        if(dalgo)
 	              checkCUDNN(cudnnConvolutionBackwardData(cudnn, &alpha, kernel_descriptor,
