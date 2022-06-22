@@ -2,7 +2,7 @@
 
 # Parallel-YOLO/scripts/create_targets.py: 7
 # Parallel-YOLO/scripts/infer_targets.py: 7
-numpy == 1.17.2
+numpy == 1.22.0
 
 # Parallel-YOLO/processing/combineFourImage.py: 1
 # Parallel-YOLO/processing/resize.py: 1
