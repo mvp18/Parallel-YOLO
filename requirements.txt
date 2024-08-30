@@ -38,7 +38,7 @@ opencv-openvino-contrib-python == 4.1.1.26
 # Parallel-YOLO/processing/resize.py: 1
 # Parallel-YOLO/scripts/create_targets.py: 6
 # Parallel-YOLO/scripts/infer_targets.py: 6
-opencv-python == 4.2.0.34
+opencv-python == 4.8.1.78
 
 # Parallel-YOLO/processing/combineFourImage.py: 1
 # Parallel-YOLO/processing/resize.py: 1
