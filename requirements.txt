@@ -50,7 +50,7 @@ opencv-python-aarch64 == 3.3.0.1
 # Parallel-YOLO/processing/resize.py: 1
 # Parallel-YOLO/scripts/create_targets.py: 6
 # Parallel-YOLO/scripts/infer_targets.py: 6
-opencv-python-headless == 4.2.0.34
+opencv-python-headless == 4.8.1.78
 
 # Parallel-YOLO/processing/combineFourImage.py: 1
 # Parallel-YOLO/processing/resize.py: 1
